@@ -61,7 +61,7 @@
 //                                  First version to be pushed to my GitHub page (Arno65)
 //  version 1.5s    2022-06-30      First draft for stream mode - (x,y) plot for first 2 channels ONLY
 //  version 1.5t    2022-07-01      Refactor graphical part - plot constants' go global  to speed up stream mode.
-//
+//  version 1.5u    2022-07-06      (Automatic) Match oversampling degree with a maximum of sample speed, a range check
 //
 //
 //  W.T.D.
@@ -89,12 +89,14 @@
 //              A previous version had de Framework compiled for Intel only.
 //              Now the source code is integrated and the project can be compiled for Intel and Apple M1
 //     ~10.     A functioning HELP window.
-// -->  11.     Implement a 'stream mode' on the TeensyLogger. After that add that functionality to this app.
+//     .11.     Implement a 'stream mode' on the TeensyLogger. After that add that functionality to this app.
+//              Only done for (x,y)-plot  -  yet
 // -->  12.     Export data to *.csv (for spreadsheets) and a formatted version for GnuPlot.
 //              (Like nr.8) This can be done with other apps. Using the JSON as input for conversion.
 // -->  13.     Optional zoom in with time based plot on time scale - BUT HOW? - as... from -3 Volt ... + 5.5 Volt ???
 // -->  14.     Optional zoom in with (x,y) plot on quadrant - just make a dropdown for [All @ 10 Volt, All @ 5 Volt, Q1, Q2, Q3, Q4]
 // -->  15.     Optional inversion of X-axis and/or Y-axis (to skip the use of inverters on the A.C.)
+// -->  16.     Optional Z-axis, 2D plot with (line/point) intensity for the Z-axis.
 //
 /*
         Most of the user I/O options can be accessed by key equivalents (hotkeys.)
@@ -461,14 +463,33 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     
     
     func updateSampleAndDivisionTime() {
-        let iIT = Int(intervalTime.stringValue) ?? 0
-        let iNS = Int(numberOfSamples.stringValue) ?? 0
-        let tus = iIT * iNS
+        let iIT0    = Int(intervalTime.stringValue) ?? 0
+        let iNS     = Int(numberOfSamples.stringValue) ?? 0
+        let ixDOS   = Int(availableOversampling[degreeOfOversampling.indexOfSelectedItem]) ?? 0
         var st:Float = 0.0
         var dt:Float = 0.0
         var hsss = sSeconds
         var hdss = sSeconds
                 
+        // First check & change the relation between the degree of oversampling and the sample interval time.
+        // While testing my system it showed that there is a minimal sample interval time or maximum sample speed
+        // depending on the chosen degree of oversampling. This dependence is shown in the next table.
+        //
+        // Oversampling         minimal sample interval time
+        //      4                   60 µs.
+        //      3                   30 µs.
+        //      2                   20 µs.
+        //      1                   16 µs.
+        //      0                    4 µs.
+        
+        // Keep the selected oversampling degree and match to a minimal interval time
+        let msit:[Int] = [4,16,20,30,60]
+        let iIT = max( iIT0, msit[ixDOS] )
+        let tus = iIT * iNS
+
+        // Change interval time on view if needed...
+        if (iIT != iIT0) { intervalTime.stringValue = String(iIT) }
+        
         // seconds?
         if tus >= 1000000 {
             st = Float(tus) / 1000000
@@ -508,23 +529,27 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
             if sf >= 1  { sampleFrequency.stringValue = String(format: "%.2f", sf) }
             else        { sampleFrequency.stringValue = String(format: "%.4f", sf) }
 
-        
         sampleTime.stringValue          = String(format: "%.4f", st)
         sampleTimeUnit.stringValue      = hsss
         divisionTime.stringValue        = String(format: "%.4f", dt)
         divisionTimeUnit.stringValue    = hdss
+
+        mouseClickSample.stringValue = "..."
     }
 
     
+    
+    @IBAction func changeOversampling(_ sender: Any) {
+        updateSampleAndDivisionTime()
+    }
+    
     @IBAction func changeSampleInterval(_ sender: Any) {
         updateSampleAndDivisionTime()
-        mouseClickSample.stringValue = "..."
     }
     
 
     @IBAction func changeNumberOfSamples(_ sender: Any) {
         updateSampleAndDivisionTime()
-        mouseClickSample.stringValue = "..."
     }
     
     

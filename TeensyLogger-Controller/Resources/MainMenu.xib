@@ -350,26 +350,29 @@ Gw
                     <popUpButton toolTip="(⌘G) Select the degree of oversampling." verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="jEK-Mx-KYy">
                         <rect key="frame" x="904" y="575" width="128" height="25"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <popUpButtonCell key="cell" type="push" title="3" bezelStyle="rounded" alignment="center" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="NMZ-Ih-Nq5" id="eZP-9B-XAc">
+                        <popUpButtonCell key="cell" type="push" title="3" bezelStyle="rounded" alignment="center" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="lvW-2y-QNV" id="eZP-9B-XAc">
                             <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                             <font key="font" size="14" name="Iosevka"/>
                             <string key="keyEquivalent">g</string>
                             <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                             <menu key="menu" id="qvd-8B-rGD">
                                 <items>
-                                    <menuItem title="4" id="yuY-IO-lz3"/>
-                                    <menuItem title="3" state="on" id="NMZ-Ih-Nq5"/>
+                                    <menuItem title="0" id="yuY-IO-lz3"/>
+                                    <menuItem title="1" id="NMZ-Ih-Nq5"/>
                                     <menuItem title="2" id="lTP-Zx-WXn"/>
-                                    <menuItem title="1" id="lvW-2y-QNV"/>
-                                    <menuItem title="0" id="gCP-6Y-Xou"/>
+                                    <menuItem title="3" state="on" id="lvW-2y-QNV"/>
+                                    <menuItem title="4" id="gCP-6Y-Xou"/>
                                 </items>
                             </menu>
                         </popUpButtonCell>
+                        <connections>
+                            <action selector="changeOversampling:" target="536" id="uwU-mU-jhz"/>
+                        </connections>
                     </popUpButton>
                     <textField toolTip="Enter the time interval in microsecond betweens samples." focusRingType="none" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="PtX-No-dp3">
                         <rect key="frame" x="907" y="551" width="121" height="21"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" focusRingType="none" alignment="right" title="200000" drawsBackground="YES" id="oDh-c2-eHf">
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" focusRingType="none" alignment="right" title="1000" drawsBackground="YES" id="oDh-c2-eHf">
                             <font key="font" size="13" name="Iosevka"/>
                             <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                             <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -606,7 +609,7 @@ Gw
                     <textField toolTip="From -10 to +10" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="H4D-nc-VJx">
                         <rect key="frame" x="934" y="343" width="73" height="17"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="1.0" id="MYR-LN-7yz">
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="500.0000" id="MYR-LN-7yz">
                             <font key="font" size="14" name="Iosevka"/>
                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
                             <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
@@ -615,7 +618,7 @@ Gw
                     <textField verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Q8H-Qj-pA4">
                         <rect key="frame" x="934" y="318" width="73" height="17"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="50.0" id="nKA-b9-HcD">
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="25.0000" id="nKA-b9-HcD">
                             <font key="font" size="14" name="Iosevka"/>
                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
                             <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
@@ -624,7 +627,7 @@ Gw
                     <textField verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="zMe-LU-1Ti">
                         <rect key="frame" x="1009" y="344" width="25" height="14"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="left" title="s." id="PKV-4u-7Rb">
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="left" title="ms." id="PKV-4u-7Rb">
                             <font key="font" size="12" name="Iosevka"/>
                             <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
                             <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
@@ -664,7 +667,7 @@ Gw
                     <textField toolTip="From -10 to +10" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="u8O-YB-iYd">
                         <rect key="frame" x="934" y="368" width="73" height="17"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="500" id="aLP-aD-1Wx">
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="1000.0" id="aLP-aD-1Wx">
                             <font key="font" size="14" name="Iosevka"/>
                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
                             <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
