@@ -62,6 +62,8 @@
 //  version 1.5s    2022-06-30      First draft for stream mode - (x,y) plot for first 2 channels ONLY
 //  version 1.5t    2022-07-01      Refactor graphical part - plot constants' go global  to speed up stream mode.
 //  version 1.5u    2022-07-06      (Automatic) Match oversampling degree with a maximum of sample speed, a range check
+//  version 1.6j    2022-07-21      Reformatted the save JSON output file.
+//                                  One main object with three objects; version, initialisation, sample values.
 //
 //
 //  W.T.D.
@@ -72,6 +74,7 @@
 //                  Can work with open & save setup and data options.
 //                  I once thought ~ Will not work. Rethink this requirment.
 //     ~2.II.   JSON formatted save files - open and save are working -- open recent will not do for the time being...
+//              (Rewritten on 2022-07-21)
 //     ~3.      Simple square shaped plot (X,Y) in the range -10...+10V for both axis.
 //                  0K. Done. For all even number selected inputs.
 //                  So one (x,y)-plot if 2 inputs are selected and four (x,y)-plots if 8 inputs are selected.
@@ -479,11 +482,16 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         //      4                   60 µs.
         //      3                   30 µs.
         //      2                   20 µs.
-        //      1                   16 µs.
+        //      1                   12 µs.
         //      0                    4 µs.
+
+        //  -- !!!! -- -- !!!! -- -- !!!! -- -- !!!! -- -- !!!! -- -- !!!! -- -- !!!! -- -- !!!! -- -- !!!! --
+        // And then I realised these numbers ae only tested on a one (1) channel acquisition.
+        // DO the 8 channel measurements!
         
         // Keep the selected oversampling degree and match to a minimal interval time
-        let msit:[Int] = [4,16,20,30,60]
+        // let msit:[Int] = [4,12,20,30,60]    // The production & deploy values
+        let msit:[Int] = [1,2,3,4,5]    // The test & debug values
         let iIT = max( iIT0, msit[ixDOS] )
         let tus = iIT * iNS
 
@@ -981,31 +989,44 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy/MM/dd HH:mm"
         let sDateNow = formatter.string(from: dateNOW)
+                
+        let ht4     = "    "            // Tabs as spaces...
+        let ht8     = ht4 + ht4
+        let ht12    = ht4 + ht8
+        let ht16    = ht4 + ht12
+        let ht20    = ht4 + ht16
+
+        // The four Object titles
+        let openJSON    =  "{\n"
+        let mainJSON    =  ht4 + "\"TeensyLogger-Controller-JSON\": {\n"
+        let verJSON     =  ht8 + "\"TeensyLogger-Controller-version\": {\n"
+        let initJSON    =  ht8 + "\"TeensyLogger-Controller-initials\": {\n"
+        let dataJSON    =  ht8 + "\"TeensyLogger-Controller-sample-values\": {\n"
+        let subclJSON   =  "},\n"
+        let closeJSON   =  "}\n"
+
+        let verlJSON    =  ht12 + "\"name\": \"TeensyLogger-Controller setup file\",\n" +
+                           ht12 + "\"version\": \"" + appVersion! + "\",\n" +
+                           ht12 + "\"data date\": \"" + sDateNow + "\"\n" + ht8 + subclJSON
+        
+        let chJSON = ht12 + "\"" + json_channels + "\": " + String(numberOfChannels.indexOfSelectedItem) + ",\n"
+        let osJSON = ht12 + "\"" + json_oversmpl + "\": " + String(degreeOfOversampling.indexOfSelectedItem) + ",\n"
+        let ivJSON = ht12 + "\"" + json_interval + "\": " + intervalTime.stringValue + ",\n"
+        let spJSON = ht12 + "\"" + json_samples  + "\": " + numberOfSamples.stringValue + ",\n"
+        let psJSON = ht12 + "\"" + json_plotStIx + "\": " + String(plotStyle.indexOfSelectedItem) + "\n"
+        let initlJSON = chJSON + osJSON + ivJSON + spJSON + psJSON + ht8 + subclJSON
         
         var dataSetJSON: String = ""
-        let ht4     = "    "            // Tabs as spaces...
-        let ht12    = "            "
-        let ht14    = "              "
-
-        let initJSON =  ht4 + "\"name\": \"TeensyLogger setup file\",\n    \"version\": \"" + appVersion! +
-                        "\",\n    \"data date\": \"" + sDateNow + "\"\n"
-        
-        let chJSON = ht4 + "\"" + json_channels + "\": " + String(numberOfChannels.indexOfSelectedItem) + ",\n"
-        let osJSON = ht4 + "\"" + json_oversmpl + "\": " + String(degreeOfOversampling.indexOfSelectedItem) + ",\n"
-        let ivJSON = ht4 + "\"" + json_interval + "\": " + intervalTime.stringValue + ",\n"
-        let spJSON = ht4 + "\"" + json_samples  + "\": " + numberOfSamples.stringValue + ",\n"
-        let psJSON = ht4 + "\"" + json_plotStIx + "\": " + String(plotStyle.indexOfSelectedItem) + "\n"
-
         let ppr     = plotPoints.endIndex
         let ppc     = plotPoints[0].endIndex
         for s in 0...ppr-1 {
-            dataSetJSON += ht4 + "\"s" + String(s+1) + "\":\n" + ht12 + "[\n"
+            dataSetJSON += ht12 + "\"s" + String(s+1) + "\":\n" + ht16 + "[\n"
             for c in 0...ppc-1 {
-                dataSetJSON += ht14 + String(plotPoints[s][c] )
+                dataSetJSON += ht20 + String(plotPoints[s][c] )
                 if c < ppc-1 {
                     dataSetJSON += ",\n"
                 } else {
-                    dataSetJSON += "\n" + ht12 + "]"
+                    dataSetJSON += "\n" + ht16 + "]"
                 }
             }
             if s < ppr-1 {
@@ -1014,9 +1035,17 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
             dataSetJSON += "\n"
         }
             
-        rsJSON =    "[\n  {\n" + initJSON + "  },\n  {\n" +
-                    chJSON + osJSON + ivJSON + spJSON + psJSON +
-                    "  },\n  {\n" + dataSetJSON + "  }\n]\n"
+        rsJSON =    openJSON    +
+                    mainJSON    +
+                    verJSON     +
+                    verlJSON    +
+                    initJSON    +
+                    initlJSON   +
+                    dataJSON    +
+                    dataSetJSON +
+                    ht8 +   closeJSON   +
+                    ht4 +   closeJSON   +
+                            closeJSON
         
         return rsJSON
     }
