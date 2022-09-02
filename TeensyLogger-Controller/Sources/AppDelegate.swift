@@ -5,6 +5,7 @@
 //      This project was started with XCode 13.4 on june 2022.
 //      The main language was Swift 5.0
 //      This code uses the ORSSerialPort Framework, and the Objective-C source code (2014) is used.
+//      A part of the 'fft.swift' was created by Christopher Helf on 17.08.15.
 //    ----------------------------------------------------------------------------------------------------
 //
 //  From... ORSSerialPortSwiftDemo
@@ -36,7 +37,6 @@
 // See 'SerialPortController.swift' for version information.
 //
 
-
 import Cocoa
 
 // Reading the mouse position can only be done in AppDelegate.swift but is needed in SerialPortController.swift
@@ -44,19 +44,15 @@ import Cocoa
 var mousePositionX:Int  = -1
 var mousePositionY:Int  = -1
 
-
 @NSApplicationMain
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     @IBOutlet weak var window: NSWindow!
-
     
     // Needed for mouse pointer location on the main window
     var location: NSPoint { window.mouseLocationOutsideOfEventStream }
 
-    
     func applicationDidFinishLaunching(_ aNotification: Notification) {
-        
         NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved]) {
             // Mouse position on this active view (window)
             mousePositionX = Int(self.location.x)       // Scaling will be done in 'SerialPortController.swift'
@@ -64,7 +60,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return $0
         }
     }
-        
 }
 
 

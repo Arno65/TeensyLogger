@@ -1050,6 +1050,35 @@ Cg
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <imageCell key="cell" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyDown" id="7eF-5V-QOF"/>
                     </imageView>
+                    <button hidden="YES" toolTip="(⌘F) Start the fft calculation, spectrum analysis on the current data set." verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="nvB-dg-WaK">
+                        <rect key="frame" x="987" y="433" width="63" height="32"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="fft" bezelStyle="rounded" alignment="center" enabled="NO" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="d0M-4i-0P1">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" size="12" name="Iosevka"/>
+                            <string key="keyEquivalent">f</string>
+                            <modifierMask key="keyEquivalentModifierMask" command="YES"/>
+                            <connections>
+                                <action selector="workSpectrum:" target="536" id="dI2-Nc-g6O"/>
+                            </connections>
+                        </buttonCell>
+                    </button>
+                    <button toolTip="Work `init &amp; start` in a loop." verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="EpU-Qx-pqp">
+                        <rect key="frame" x="918" y="441" width="50" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="check" title="loop" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="JtX-Hz-slZ">
+                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                            <font key="font" size="12" name="Iosevka"/>
+                        </buttonCell>
+                    </button>
+                    <button toolTip="Work `initialize` in a loop." verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="tpd-0u-GGK">
+                        <rect key="frame" x="918" y="473" width="50" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="check" title="loop" bezelStyle="regularSquare" imagePosition="left" inset="2" id="yrg-Fv-E6Y">
+                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                            <font key="font" size="12" name="Iosevka"/>
+                        </buttonCell>
+                    </button>
                 </subviews>
             </view>
             <point key="canvasLocation" x="-232.5" y="624"/>
@@ -1075,6 +1104,8 @@ Cg
                 <outlet property="helpRichText" destination="pWi-oR-0Cd" id="b9E-Er-QBd"/>
                 <outlet property="helpRichTextScroller" destination="1A2-h1-Tdp" id="Wnj-ad-hd9"/>
                 <outlet property="intervalTime" destination="PtX-No-dp3" id="pba-Fc-Shu"/>
+                <outlet property="loopArm" destination="tpd-0u-GGK" id="Osd-Mz-Ga8"/>
+                <outlet property="loopRun" destination="EpU-Qx-pqp" id="IIo-av-GpT"/>
                 <outlet property="mouseClickSample" destination="RTJ-XY-BZg" id="ata-VF-av6"/>
                 <outlet property="numberOfChannels" destination="3bT-hZ-sJC" id="GVe-eS-ISa"/>
                 <outlet property="numberOfSamples" destination="Pwi-At-OKW" id="dU6-uN-n8T"/>

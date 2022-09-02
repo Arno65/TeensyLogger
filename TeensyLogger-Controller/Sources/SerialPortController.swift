@@ -1,30 +1,6 @@
 //
 //  SerialPortController.swift
 //
-//  Based on code from... ORSSerialPortSwiftDemo
-//
-//  Created by Andrew Madsen on 10/31/14.
-//  Copyright (c) 2014 Open Reel Software. All rights reserved.
-//
-//	Permission is hereby granted, free of charge, to any person obtaining a
-//	copy of this software and associated documentation files (the
-//	"Software"), to deal in the Software without restriction, including
-//	without limitation the rights to use, copy, modify, merge, publish,
-//	distribute, sublicense, and/or sell copies of the Software, and to
-//	permit persons to whom the Software is furnished to do so, subject to
-//	the following conditions:
-//	
-//	The above copyright notice and this permission notice shall be included
-//	in all copies or substantial portions of the Software.
-//	
-//	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-//	OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-//	MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-//	IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-//	CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-//	TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-//	SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-//
 // (cl)  Spring, Summer 2022  by Arno Jacobs
 //
 //  version 1.0a    2022-06-09      Stripped the ORSSerialPortSwiftDemo to the minimum
@@ -64,6 +40,20 @@
 //  version 1.5u    2022-07-06      (Automatic) Match oversampling degree with a maximum of sample speed, a range check
 //  version 1.6j    2022-07-21      Reformatted the save JSON output file.
 //                                  One main object with three objects; version, initialisation, sample values.
+//  version 1.7f    2022-07-25      Adding fft-algorithm - first draft
+//  version 1.7g    2022-08-20      Small changes - added fft button and loop check box.
+//                                  The 'initialize & start' now can run in a loop
+//  version 1.8f    2022-08-23      The logged input data transformed and normalized for fft function
+//                                  For decent spectrum output need big data-set 2048 or 4096 points with
+//                                  'higher' frequency, as in, lots of 'fluctuations' in the data set.
+//                                  Stripped fft calculation
+//                                  At this stage: fft spectrum output only to console
+//  version 1.8j    2022-08-25      The JSON 'parser' for reading data sets was slow    O(n^2)
+//                                  Changed to a linear time algorithm                  O(n)
+//  version 1.8l    2022-08-27      Complete redo for JSON 'parser'. The 'formatting' of the data set "S#": [ 1,2,3 ],
+//                                  is less strick now. No need to place every data entry on a seperate line.
+//                                  Minor changes in code.
+//
 //
 //
 //  W.T.D.
@@ -74,7 +64,8 @@
 //                  Can work with open & save setup and data options.
 //                  I once thought ~ Will not work. Rethink this requirment.
 //     ~2.II.   JSON formatted save files - open and save are working -- open recent will not do for the time being...
-//              (Rewritten on 2022-07-21)
+//              (Rewritten on 2022-07-21 -> 'correct' JSON format)
+//              (Rewritten on 2022-08-25 -> faster JSON 'parser' for the dataset (from O(n^2) -> O(n))
 //     ~3.      Simple square shaped plot (X,Y) in the range -10...+10V for both axis.
 //                  0K. Done. For all even number selected inputs.
 //                  So one (x,y)-plot if 2 inputs are selected and four (x,y)-plots if 8 inputs are selected.
@@ -82,24 +73,30 @@
 //     ~4.      More text info on main window. Like 1 V/div with (x,y)-plot.
 //     !5.      Zoomed view of plot. Example: (x,y) plot in a range [0V..5V], zoom to this range. Or just one quadrant
 //              Will not do that in the near future (but is possible)
+//              Best to use huge data sets for fft-analysis. A zoom option on the time (X) axis is very helpful here.
 //     ~6.      Hint info with mouse click on oscilloscope view. Click a point on the view and show it's corresponding values.
 //              There is time and Voltage info from a mouse click on the oscilloscope canvas.
 //     .7.      Refactor to clean code - delete all dummy's and unnecessary doubles
 //              The crosses on the plots can be more compact as functions.
 // -->  8.      Spectrum analysis and other mathematical tricks. (Derivative of the line on a point.)
 //              This can be done with other apps. Using the JSON as input for analysis.
+//              FFT first.
 //     ~9.      The serial I/O code (ORSSerialPort) needs recompilation for release version.
 //              A previous version had de Framework compiled for Intel only.
 //              Now the source code is integrated and the project can be compiled for Intel and Apple M1
 //     ~10.     A functioning HELP window.
-//     .11.     Implement a 'stream mode' on the TeensyLogger. After that add that functionality to this app.
-//              Only done for (x,y)-plot  -  yet
+//     ~11.     Implement a 'stream mode' on the TeensyLogger. After that add that functionality to this app.
+//              Only done for (x,y)-plot  -  yet -- ONLY for 'long' sample interval. The TeensyLogger and serial IO have speed limits.
 // -->  12.     Export data to *.csv (for spreadsheets) and a formatted version for GnuPlot.
 //              (Like nr.8) This can be done with other apps. Using the JSON as input for conversion.
-// -->  13.     Optional zoom in with time based plot on time scale - BUT HOW? - as... from -3 Volt ... + 5.5 Volt ???
+//              Create a seperate (command line) tool for converting the JSON to CSV & GNUPlot input. For those who need it.
+//     ~13.     (Endless) loop options for 'arm' and 'arm & start'
+//              For this option the function serialPort() has some recursive elements - so it's endless until the stack is running out
+//              Maybe all is fine - but I still have to check memory usage and alike...
 // -->  14.     Optional zoom in with (x,y) plot on quadrant - just make a dropdown for [All @ 10 Volt, All @ 5 Volt, Q1, Q2, Q3, Q4]
 // -->  15.     Optional inversion of X-axis and/or Y-axis (to skip the use of inverters on the A.C.)
 // -->  16.     Optional Z-axis, 2D plot with (line/point) intensity for the Z-axis.
+// -->  17.     Optional zoom in with time based plot on time scale - BUT HOW? - as... from -3 Volt ... + 5.5 Volt ???
 //
 /*
         Most of the user I/O options can be accessed by key equivalents (hotkeys.)
@@ -111,6 +108,7 @@
          (⌘C)       (dis)connect            (TL)
          (⌘D)       plot (term. data)       (TL)
          (⌘E)       send (manual command)   (TL)
+         (⌘F)       fft spectrum analysis   (TL)
          (⌘G)       oversampling            (init TL)
          (⌘H)       hide app.               (main menu)
          (⌘I)       initialize              (TL)
@@ -149,6 +147,8 @@
 import Cocoa
 import ORSSerial
 
+// The fft part
+var fft = FFT()
 // Outside the SerialPortController-class
 // In the function "sendCommand" this constant is used as a default value
 let standardSleepTime: UInt32 = 101     // This is just a bit more than the timeout set
@@ -160,7 +160,6 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
 
 	@objc let serialPortManager = ORSSerialPortManager.shared()         // usbmodem101899901
 	@objc let availableBaudRates = [115200,57600,9600,1200]
-    
     @objc dynamic var serialPort: ORSSerialPort? {
 		didSet {
 			oldValue?.close()
@@ -172,52 +171,45 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
 		}
 	}
 	
+	@IBOutlet weak  var openCloseButton:        NSButton!
+    @IBOutlet weak  var sendTextField:          NSTextField!
+    @IBOutlet weak  var sendButton:             NSButton!
+    @IBOutlet       var baudRateSelector:       NSPopUpButton!
+    @IBOutlet       var receivedDataTextView:   NSTextView!
+    @IBOutlet weak  var numberOfChannels:       NSPopUpButton!
+    @IBOutlet weak  var intervalTime:           NSTextField!
+    @IBOutlet weak  var numberOfSamples:        NSTextField!
+    @IBOutlet weak  var degreeOfOversampling:   NSPopUpButton!
+    @IBOutlet weak  var plotStyle:              NSPopUpButton!
+    @IBOutlet weak  var loopArm:                NSButton!
+    @IBOutlet weak  var loopRun:                NSButton!
+    @IBOutlet weak  var serialPortLabel:        NSTextField!
+    @IBOutlet weak  var baudRateLabel:          NSTextField!
+    @IBOutlet weak  var statusTeensyLogger:     NSTextField!
+    @IBOutlet weak  var mouseClickSample:       NSTextField!
+    @IBOutlet       var helpRichText:           NSTextView!
+    @IBOutlet weak  var helpRichTextScroller:   NSScroller!
+    @IBOutlet weak  var sampleFrequency:        NSTextField!
+    @IBOutlet weak  var sampleTime:             NSTextField!
+    @IBOutlet weak  var sampleTimeUnit:         NSTextField!
+    @IBOutlet weak  var divisionTime:           NSTextField!
+    @IBOutlet weak  var divisionTimeUnit:       NSTextField!
+    @IBOutlet weak  var divisionTimeLabel:      NSTextField!
+    @IBOutlet weak  var divisionYaxis:          NSTextField!
+    @IBOutlet weak  var changePort:             NSPopUpButton!
+    @IBOutlet weak  var changeBaudRate:         NSPopUpButton!
+    @IBOutlet weak  var canvas:                 NSImageView!
     
-	@IBOutlet weak var openCloseButton: NSButton!
-    @IBOutlet weak var sendTextField: NSTextField!
-    @IBOutlet weak var sendButton: NSButton!
-    @IBOutlet var baudRateSelector: NSPopUpButton!
-    @IBOutlet var receivedDataTextView: NSTextView!
-
-    @IBOutlet weak var numberOfChannels: NSPopUpButton!
-    @IBOutlet weak var intervalTime: NSTextField!
-    @IBOutlet weak var numberOfSamples: NSTextField!
-    @IBOutlet weak var degreeOfOversampling: NSPopUpButton!
-    
-    @IBOutlet weak var plotStyle: NSPopUpButton!
-    
-    @IBOutlet weak var serialPortLabel: NSTextField!
-    @IBOutlet weak var baudRateLabel: NSTextField!
-    
-    @IBOutlet weak var statusTeensyLogger: NSTextField!
-    @IBOutlet weak var mouseClickSample: NSTextField!
-    @IBOutlet var helpRichText: NSTextView!
-    @IBOutlet weak var helpRichTextScroller: NSScroller!
-    
-    @IBOutlet weak var sampleFrequency: NSTextField!
-    @IBOutlet weak var sampleTime: NSTextField!
-    @IBOutlet weak var sampleTimeUnit: NSTextField!
-    @IBOutlet weak var divisionTime: NSTextField!
-    @IBOutlet weak var divisionTimeUnit: NSTextField!
-    @IBOutlet weak var divisionTimeLabel: NSTextField!
-    @IBOutlet weak var divisionYaxis: NSTextField!
-    
-    @IBOutlet weak var changePort: NSPopUpButton!
-    @IBOutlet weak var changeBaudRate: NSPopUpButton!
-    
-    @IBOutlet weak var canvas: NSImageView!
-    
-    // Get current application version - for JSON output
-    let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
-
     var checkSelectedOpen   = false
     var checkArmed          = false
-    
+    var checkLoopArm        = false
+    var checkLoopRun        = false
     let tlReady     = "The TeensyLogger is ready for use"
     let tlNOTReady  = "The TeensyLogger is NOT connected"
     let sConnect    = "connect"
     let sDisconnect = "disconnect"
-   
+    // Get current application version - for JSON output
+    let appVersion  = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
     // Teensy Logger commands
     let tl_channels = "channels"
     let tl_oversmpl = "oversampling"
@@ -230,24 +222,20 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     let tl_status   = "status"
     let tl_stream   = "stream"
     let sEq         = "="
-    
     // JSON helper strings
     let json_channels   = "channelsIndex"
     let json_oversmpl   = "oversamplingIndex"
     let json_interval   = "intervalValue"
     let json_samples    = "samplesValue"
     let json_plotStIx   = "plotstyleIndex"
-
     // Data -> action helper codes
     let EoDDC       = "!$ "     // End of Data Dump characters
     let SASC        = "~$ "     // Sampling automatic stopped... characters
-
     var needsInit               = true
     let availableChannels       = ["1","2","3","4","5","6","7","8"]
     let availableOversampling   = ["0","1","2","3","4"]
     let availablePlotStyles     = ["time","time [avg.]","(x,y)","(x,y) [avg.]"]
     let initialOSS              = "3"
-    
     // These are the calibrated values for -10V0, 0V0 and +10V0
     // In my case the eight channels of the TeensyLogger calibrated to the same values
     let calibratedMinus10V0 = [200,200,201,200,201,200,201,200]
@@ -256,20 +244,16 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     let maxDepth    = 24576     // Maximum of samples per run - this number is bound by the amount of RAM on the Teensy 4.X
     let zeroVolt    = 0
     let oneVolt     = 1
-//    let twoVolt     = 2
     let fiveVolt    = 5
     let tenVolt     = 10
     let twelveVolt  = 12
-
     // Time scale help
     let sSeconds        = "s."
     let sMilliseconds   = "ms."
     let sMicroseconds   = "µs."
     let sNanoseconds    = "ns."
-    
     // Line feed character
     let sLF = "\n"
-
     /*
      New calibation data - data created with better TL hardware on 2022-06-20:
 
@@ -281,23 +265,19 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
      Data from: TL-Avg-2/Avg9V995.txt               [821,822,821,821,821,821,821,821]   Check
      Data from: TL-Avg-2/AvgMinus9V995.txt          [200,200,201,200,201,200,201,200]   Check
      */
-    
-    var plotPoints:[[Int]] = [] // Now an empty list for all plot points for all 8 channels.
-    
+    var image = NSImage()
+    var plotPoints:[[Int]]  = [] // Now an empty list for all plot points for all 8 channels.
     var streamPoints:[Int]  = []
     var streamMode:Bool     = false
     var streamStart:Bool    = true
     let streamEndString     = "$$ Streaming stopped."
     let streamPath          = NSBezierPath()
-    
-    var image = NSImage()
-    
+    var fftInputPoints:[Double] = []                // Add points on the locations where the plotPoints are calculated
+    let fftSampleLengths:[Int]  = [512,1024,2048,4096,8192,16384]    // Either strip logged set or append with 0V0-values
     let avgSamples = 10     // At this point the average value is taken over ten (10) consecutive data points
-    
     let bgColour    = NSColor(red: 0.0, green: 0.10, blue: 0.05, alpha: 1.0)
     let pointColour = NSColor(red: 0.9, green: 0.20, blue: 0.15, alpha: 1.0)
     let gridColour  = NSColor(red: 0.0, green: 0.80, blue: 0.15, alpha: 1.0)
-
     let channelColours   = [ NSColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0),          // colour for channel 1 plot
                              NSColor(red: 1.0, green: 1.0, blue: 0.0, alpha: 1.0),          // and        channel 2...
                              NSColor(red: 0.0, green: 1.0, blue: 0.0, alpha: 1.0),
@@ -306,8 +286,6 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
                              NSColor(red: 1.0, green: 0.0, blue: 1.0, alpha: 1.0),          //           channel 6...
                              NSColor(red: 0.0, green: 0.0, blue: 1.0, alpha: 1.0),
                              NSColor(red: 0.6, green: 0.4, blue: 1.0, alpha: 1.0) ]         // and   for channel 8
-
-    
     // Get some graphical sizes
     var px:CGFloat  = 0
     var py:CGFloat  = 0
@@ -331,30 +309,29 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         y0 = Int(py / 2)
         V1 = Int(px / 24)                   // There are 24 divisions per axis on the canvas
         canvas_size = NSMakeSize(px,py)
-
         for ci in 0...maxChannels-1 {
             correctionFactorPlus[ci]  = Float (tenVolt*V1) / Float (calibratedPlus10V0[ci] - calibrated0V0[ci])
             correctionFactorMinus[ci] = Float (tenVolt*V1) / Float (calibrated0V0[ci] - calibratedMinus10V0[ci])
         }
-
         // First time init code...
         if needsInit {
             numberOfChannels.removeAllItems()
             numberOfChannels.addItems(withTitles: availableChannels)
-            
             degreeOfOversampling.removeAllItems()
             degreeOfOversampling.addItems(withTitles: availableOversampling)
             degreeOfOversampling.setTitle(initialOSS)
-            
             plotStyle.removeAllItems()
             plotStyle.addItems(withTitles: availablePlotStyles)
-                
             // Hide the (ugly) scroll bar on the help screen
             helpRichTextScroller.isHidden = true
-            
+            // The two loop check buttons
+            loopArm.state   = NSControl.StateValue.off
+            loopRun.state   = NSControl.StateValue.on
+            checkLoopArm    = false
+            checkLoopRun    = false
+
             needsInit = false
         }
-        
         streamMode = false
         updateSampleAndDivisionTime()
         mouseClickSample.stringValue = "..."
@@ -382,6 +359,7 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     
     // Now test for a sequence
     @IBAction func armTL(_ sender: Any) {
+        checkLoopArm = loopArm.state == NSControl.StateValue.on
         streamMode = false
         updateSampleAndDivisionTime()
         // Read from window...
@@ -397,14 +375,12 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         if nsm < 0 || nsm > maxDepth { nsm = 0 }                   // Check for range in the TeensyLogger Teensy 4.0 code
         numberOfSamples.stringValue = String(nsm)
         let dovs    = Int(availableOversampling[degreeOfOversampling.indexOfSelectedItem]) ?? 4
-        
         // Only arm for useful or workable values
         if itime > 0 && nsm > 0 {
-            let snch    = tl_channels + sEq +   String(nch)
-            let sitime  = tl_interval + sEq +   String(itime)
-            let sms     = tl_samples + sEq +    String(nsm)
-            let sdovs   = tl_oversmpl + sEq +   String(dovs)
-            
+            let snch    = tl_channels + sEq +   String(nch)     // [1..8]
+            let sitime  = tl_interval + sEq +   String(itime)   // the interval time between samples is allways in µs.
+            let sms     = tl_samples + sEq +    String(nsm)     // Always a natural number
+            let sdovs   = tl_oversmpl + sEq +   String(dovs)    // [0..4] for 2^n times oversampling per channel.
             sendCommand(send: snch)
             sendCommand(send: sitime)
             sendCommand(send: sms)
@@ -423,14 +399,23 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     
     
     @IBAction func initializeAndStart(_ sender: Any) {
-        streamMode = false
+        checkLoopRun = loopRun.state == NSControl.StateValue.on
+        streamMode   = false
         armTL(self)
         startTL(self)
     }
     
     
     @IBAction func stopTL(_ sender: Any) {
-        streamMode = false
+        // Check for stopping 'loop' or 'steam'
+        // let stopLoopOrStream = checkLoopArm || checkLoopRun || streamMode
+        // Needed a google search: Swift nsbutton style check how to change state
+        loopArm.state = NSControl.StateValue.off
+        loopRun.state = NSControl.StateValue.off
+        checkLoopArm  = false
+        checkLoopRun  = false
+        streamMode    = false
+        // if !stopLoopOrStream { sendCommand(send: tl_stop) }
         sendCommand(send: tl_stop)
         showCanvas()
     }
@@ -445,7 +430,7 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         updateSampleAndDivisionTime()
         sendCommand(send: tl_status)
     }
-    
+
     
     @IBAction func streamModeTL(_ sender: Any) {
         // Don't forget to initialize and arm the TeensyLogger
@@ -457,11 +442,88 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         sendCommand(send: tl_stream, sleep: 200)
     }
     
-
+    
     func dumpTL() {
         cleanTextView()
         sendCommand(send: tl_dump)
         showDataPlot()
+    }
+    
+    
+    func normalize( _ i: Double, _ v0: Double, _ dVP: Double, _ dVM: Double ) -> Double {
+        var rv = i - v0
+        if rv > 0 { rv /= dVP } else { rv /= dVM }
+        return rv
+    }
+
+    
+    @IBAction func workSpectrum(_ sender: Any) {
+        //  1.  Check if there is workable data in NSTextView -> receivedDataTextView
+        //          Will work with channel one but need a minimum of 2^n samples, with n >= 10. (So 512,1024,2048,4096,...)
+        //  2.  Get timing data - number of samples and time needed for those samples. Need fps. (sample frequency)
+        //      fps is/was needed for the bandpass filter -- just 'enter' 1.0
+        //  3.  Feed dataset and coefficients to fft-routine: fft.calculate(samples, fps: fps)
+        //  4.  Log all input and output for checking. (Plotting in 'Numbers/Excel')
+        //
+        // Example for: "sine-8Vpp-10.055Hz.json" This is a 8Vpp (so from +4V to -4V) ~ 10Hz sine signal.
+        // This one has 1200 points with 250µs sample interval.
+        // In this case the function will use the first 1024 samples, 250*1024 = 256 ms
+        // fps -> samples / time -> 1024 / 256 -> 4000
+        // The fps is allready known in 'sample frequency' that can be seen on the main view.
+        //
+        //The data on the NSTextView for this set starts with:
+        // "\n1200 samples\n459\n461\n462\n464\n466\n..."
+        // ending with:
+        // "\n465\n467\n469\n\n!$\n"
+        //
+        // A maximum in this set is ~634 and a minimum ~382.
+        // Normalizing this set:
+        //  The 0V level for channel 1 with this code is 510.
+        //  This is stored in: let calibrated0V0 = [510,511,511,509,512,512,512,511]
+        //      'distance' to top 634 is 124
+        //      'distance' to bottom 382 is 128 -> this is the biggest delta to 0V0 so normalize with factor 1/128
+        //  fft_sample = (recorded_sample - calibrated0V0[0] ) / 128
+        //      This will produces 'normalized' sample values between -1.0 and +1.0.
+        //
+        // As last print all input and output data.
+        // First some checks in 'Numbers/Excel' before plotting on the canvas.
+        // What is the frequency range?
+        // What is the frequency resolution on the output?
+        // What is the energy range?
+        // And such...
+        // As all is well the raw logged data is in 'fftInputPoints[]'
+        // 1. create a 2^n size list of input samples for the fft function
+        let v0      = Double(calibrated0V0[0])          //   0V0 level for channel 1
+        let v10p    = Double(calibratedPlus10V0[0])     // +10V0 level for channel 1
+        let v10m    = Double(calibratedMinus10V0[0])    // -10V0 level for channel 1
+        let deltaVPlus: Double      = v10p - v0
+        let deltaVMinus: Double     = v0 - v10m
+        let v0a = Array(repeating: v0, count: fftSampleLengths[0]+1)
+        fftInputPoints.append(contentsOf: v0a)
+        let fftc = fftInputPoints.count               // This way the array > 512 in size -- the minimal length
+        for fl in fftSampleLengths.reversed() {
+            if (fl < fftc) {
+                fftInputPoints = Array(fftInputPoints[0..<fl])
+                break
+            }
+        }
+        // 2. normalize the dataset +10V0 is +1.0  to  -10V0 is -1.0
+        // So a -4V20 signal will be 'normalized' to -0.420, and  a +5V50 signal to +0.550
+        // The TeensyLogger might be NOT linear so the 'delta' 0V...+10V0 can be different to -10V0...0V0
+        // That's why there is a deltaVPlus  for 'delta' 0V...+10V0
+        //                 and a deltaVMinus for 'delta' -10V0...0V
+        fftInputPoints = fftInputPoints.map { normalize( $0, v0, deltaVPlus, deltaVMinus ) }
+        // 3. Set fps -> 1.0
+        // 4. Work the fft
+        //   The bandwith is fixed in the lib -> add this to the parameters
+        let spectrum = fft.calculate(fftInputPoints, fps: 1.0)
+        // From this point on do the correct plotting of the spectrum . . .
+        //
+        // Return array of spectrum if half the length of the TeensyLogger data set -> so 2*k for input samples
+        print ("n; samples; spectrum")
+        for k in 0 ..< spectrum.count {
+            print("\(k); \(fftInputPoints[2*k]); \(spectrum[k])")
+        }
     }
     
     
@@ -473,7 +535,6 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         var dt:Float = 0.0
         var hsss = sSeconds
         var hdss = sSeconds
-                
         // First check & change the relation between the degree of oversampling and the sample interval time.
         // While testing my system it showed that there is a minimal sample interval time or maximum sample speed
         // depending on the chosen degree of oversampling. This dependence is shown in the next table.
@@ -484,20 +545,21 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         //      2                   20 µs.
         //      1                   12 µs.
         //      0                    4 µs.
-
+        //
         //  -- !!!! -- -- !!!! -- -- !!!! -- -- !!!! -- -- !!!! -- -- !!!! -- -- !!!! -- -- !!!! -- -- !!!! --
         // And then I realised these numbers ae only tested on a one (1) channel acquisition.
         // DO the 8 channel measurements!
-        
+        // Reminder: The TeensyLogger is reading with two ADC's. So the sample time for 1 channels is as long as for 2 channels.
+        //              So 8 channels is like 4 samples per ADC, with 2^4 oversampling ~~> 4x60 is 240 µs. minimal sample interval???
+        // Check this again, incl. a log session of more than one channel.
+        //
         // Keep the selected oversampling degree and match to a minimal interval time
-        // let msit:[Int] = [4,12,20,30,60]    // The production & deploy values
-        let msit:[Int] = [1,2,3,4,5]    // The test & debug values
+        // let msit:[Int] = [4,12,20,30,60]     // The production & deploy values
+        let msit:[Int] = [2,6,10,15,30]         // The test & debug values
         let iIT = max( iIT0, msit[ixDOS] )
         let tus = iIT * iNS
-
         // Change interval time on view if needed...
         if (iIT != iIT0) { intervalTime.stringValue = String(iIT) }
-        
         // seconds?
         if tus >= 1000000 {
             st = Float(tus) / 1000000
@@ -529,27 +591,24 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
                 }
             }
         }
-        
         // Calculate sample frequency in Hz.
         let sf: Double = unit2micro / Double(iIT)
         if sf >= 10     { sampleFrequency.stringValue = String(format: "%.1f", sf) }
         else
             if sf >= 1  { sampleFrequency.stringValue = String(format: "%.2f", sf) }
             else        { sampleFrequency.stringValue = String(format: "%.4f", sf) }
-
         sampleTime.stringValue          = String(format: "%.4f", st)
         sampleTimeUnit.stringValue      = hsss
         divisionTime.stringValue        = String(format: "%.4f", dt)
         divisionTimeUnit.stringValue    = hdss
-
         mouseClickSample.stringValue = "..."
     }
 
     
-    
     @IBAction func changeOversampling(_ sender: Any) {
         updateSampleAndDivisionTime()
     }
+    
     
     @IBAction func changeSampleInterval(_ sender: Any) {
         updateSampleAndDivisionTime()
@@ -562,10 +621,10 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     
     
     func serialPort(_ poort: ORSSerialPort, didReceive data: Data) {
+        var loopPlotHelper = false
         if let hData = NSString(data: data, encoding: String.Encoding.utf8.rawValue) {
             let newLines = String(hData)
             let lines = newLines.split(whereSeparator: \.isNewline)
-
             if !lines.isEmpty {
                 if (lines[0] == streamEndString) {
                     streamMode = false
@@ -590,7 +649,6 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
                         } else {
                             ypos *= correctionFactorPlus[1]
                         }
-                        
                         if streamStart {                        // Only plot stream in (x,y) with first two channels.
                             streamStart = false
                             streamPath.removeAllPoints()        // start with NO points... and MOVE to starting point
@@ -604,11 +662,9 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
                     }
                 }
             }
-            
             receivedDataTextView.textStorage?.mutableString.append(newLines)
             receivedDataTextView.scrollToEndOfDocument(self)
             receivedDataTextView.needsDisplay = true
-            
             let lc = lines.endIndex - 1
             if (lc>0) {
                 if (lines[lc] == SASC) {
@@ -616,9 +672,12 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
                 } else
                     if (lines[lc] == EoDDC) {
                         showDataPlot()
+                        loopPlotHelper = true
                     }
             }
         }
+        if loopPlotHelper && checkLoopArm { armTL(self) }
+        if loopPlotHelper && checkLoopRun { initializeAndStart(self) }
     }
 
     
@@ -649,38 +708,37 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     
 	@IBAction func openOrClosePort(_ sender: Any) {
         updateSampleAndDivisionTime()
-
         // Serial IO Error helper
         if openCloseButton.title == sConnect && openCloseButton.isEnabled && !changePort.isEnabled {
-            changePort.isEnabled = true
-            changeBaudRate.isEnabled = true
-            serialPortLabel.isEnabled = true
-            baudRateLabel.isEnabled = true
+            changePort.isEnabled        = true
+            changeBaudRate.isEnabled    = true
+            serialPortLabel.isEnabled   = true
+            baudRateLabel.isEnabled     = true
         } else {
             if let port = self.serialPort {
                 if (port.isOpen) {
                     port.close()
-                    sendTextField.isEnabled     = false
-                    sendButton.isEnabled        = false
-                    self.statusTeensyLogger.stringValue = tlNOTReady
-                    checkSelectedOpen = false
-                    serialPortLabel.isEnabled = true
-                    baudRateLabel.isEnabled = true
-                    changePort.isEnabled = true
-                    changeBaudRate.isEnabled = true
+                    sendTextField.isEnabled         = false
+                    sendButton.isEnabled            = false
+                    statusTeensyLogger.stringValue  = tlNOTReady
+                    checkSelectedOpen               = false
+                    serialPortLabel.isEnabled       = true
+                    baudRateLabel.isEnabled         = true
+                    changePort.isEnabled            = true
+                    changeBaudRate.isEnabled        = true
                 } else {
                     port.open()
                     cleanTextView()
                     initCanvas()
-                    sendTextField.isEnabled     = true
-                    sendButton.isEnabled        = true
-                    self.statusTeensyLogger.stringValue = tlReady
-                    checkSelectedOpen = true
-                    changePort.isEnabled = false
-                    changeBaudRate.isEnabled = false
-                    mouseClickSample.stringValue = "..."
-                    serialPortLabel.isEnabled = false
-                    baudRateLabel.isEnabled = false
+                    sendTextField.isEnabled         = true
+                    sendButton.isEnabled            = true
+                    statusTeensyLogger.stringValue  = tlReady
+                    checkSelectedOpen               = true
+                    changePort.isEnabled            = false
+                    changeBaudRate.isEnabled        = false
+                    mouseClickSample.stringValue    = "..."
+                    serialPortLabel.isEnabled       = false
+                    baudRateLabel.isEnabled         = false
                 }
             }
         }
@@ -699,41 +757,39 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
 	
     
 	func serialPortWasClosed(_ serialPort: ORSSerialPort) {
-		openCloseButton.title = sConnect
-        serialPortLabel.isEnabled = true
-        baudRateLabel.isEnabled = true
-        changePort.isEnabled = true
-        changeBaudRate.isEnabled = true
+		openCloseButton.title       = sConnect
+        serialPortLabel.isEnabled   = true
+        baudRateLabel.isEnabled     = true
+        changePort.isEnabled        = true
+        changeBaudRate.isEnabled    = true
 	}
 	
     
 	func serialPortWasRemovedFromSystem(_ serialPort: ORSSerialPort) {
-        self.serialPort = nil
-		openCloseButton.title = sConnect
-        openCloseButton.isEnabled = false
-        checkSelectedOpen = false
-        changePort.isEnabled = true
-        changeBaudRate.isEnabled = true
-        serialPortLabel.isEnabled = true
-        baudRateLabel.isEnabled = true
+        self.serialPort             = nil
+		openCloseButton.title       = sConnect
+        openCloseButton.isEnabled   = false
+        checkSelectedOpen           = false
+        changePort.isEnabled        = true
+        changeBaudRate.isEnabled    = true
+        serialPortLabel.isEnabled   = true
+        baudRateLabel.isEnabled     = true
 	}
 	
     
 	func serialPort(_ serialPort: ORSSerialPort, didEncounterError error: Error) {
         infoView(title: "Serial port fail!", message: "SerialPort \(serialPort) encountered an error: \(error)")
-        changePort.isEnabled = true
-        changeBaudRate.isEnabled = true
-        serialPortLabel.isEnabled = true
-        baudRateLabel.isEnabled = true
+        changePort.isEnabled        = true
+        changeBaudRate.isEnabled    = true
+        serialPortLabel.isEnabled   = true
+        baudRateLabel.isEnabled     = true
     }
 
-    
     
     func matchChannelsWithPlotStyle() {
         // Match channels with selected plot style
         let nch  = Int(availableChannels[numberOfChannels.indexOfSelectedItem]) ?? 1
         var psix = plotStyle.indexOfSelectedItem
-        
         if (nch%2==1 && psix>=2) { psix -= 2 }
         if psix >= 2{
             divisionTime.isHidden       = true
@@ -747,7 +803,6 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
             divisionTimeLabel.isHidden  = false
             divisionYaxis.stringValue   = "y-axis: 1 V/div."
         }
-        
         plotStyle.selectItem(at: psix)
     }
     
@@ -764,25 +819,28 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     func retrieveData() {
         var hl:[Int] = []
         var ixc = 0
-            
         let tss = self.receivedDataTextView.textStorage!.string
         let lines = tss.split(whereSeparator: \.isNewline)      // This will split on new line and skip the empty lines.
         let lc = lines.endIndex - 2
-            
         // Make sure the canvas is visible (not hidden) - we want to see the oscilloscope canvas
         showCanvas()
-        
-        plotPoints.removeAll()  // Be sure to start with an empty list
-        
+        plotPoints.removeAll()          // Be sure to start with an empty list
+        fftInputPoints.removeAll()      // idem
         if lc > 0 { // We need input line . . .
             for c in 1...lc {
                 let channelValues = lines[c].split(whereSeparator: \.isPunctuation)
                 let chc = channelValues.endIndex - 1
                 if chc > ixc { ixc = chc }
-                hl = []
+                hl = []         // shouldn't this be hl.removeAll()
                 for cc in 0...chc {
                     let hi = Int(channelValues[cc]) ?? 0
-                    if (hi>0) { hl.append(hi) }
+                    if (hi>0) {
+                        hl.append(hi)
+                        if (cc==0) {
+                            // ONLY for channel 1
+                            fftInputPoints.append(Double(hi))
+                        }
+                    }
                 }
                 // Only append the sublists that have the correct amount of data (by that the correct data)
                 if hl.endIndex - 1 == ixc && hl != [0]  { plotPoints.append(hl) }
@@ -790,12 +848,10 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
             if (plotPoints.endIndex > 2) {
                 numberOfSamples.stringValue = String(plotPoints.endIndex)
             }
-            
             let psix = plotStyle.indexOfSelectedItem
             if (psix==1 || psix==3) && plotPoints.endIndex >= (2*avgSamples) {
                 // Now calculate the average value per 'avgSamples' plotPoints
                 // A line needs at least 2 points, so 2*'avgSamples' plotPoints for a useful average calculation
-            
                 let chh = plotPoints[0].endIndex
                 var avgHelperPoints:[[Int]] = []
                 var hsum = Array(repeating: 0, count: chh)
@@ -832,8 +888,7 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     }
     
     
-    // Open and load data from disk - or - save data to disk // ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
-    //
+    // Open and load data from disk - or - save data to disk // ----- ----- ----- -----
     func infoView(title ttl: String, message msg: String) {
         let info = NSAlert()
         info.icon = NSImage(named: "Atention")
@@ -863,8 +918,10 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         }
         return (Int(hs) ?? -1)
     }
+
     
-    // Get a list of Int values
+    // This is a slow version
+    // Get a list of Int values - this wil NOT be used for 'parsing' the data set
     func getJSONIntList(title ttl: String, json jsonData: String) -> [Int] {
         var ilst: [Int] = []
         let fts = "\"" + ttl + "\":"
@@ -877,12 +934,10 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
             hs = String(hs[(startIndex2?.upperBound...)!])
             let endIndex = hs.range(of: "]")
             hs = String(hs[..<(endIndex?.lowerBound)!])
-
             // Now only take decimal digits, or newline
             let hhs = hs
             hs = ""
             for c in hhs { if (c >= "0" && c <= "9") || c=="\n" { hs += String(c) }}
-
             let nl = hs.split(whereSeparator: \.isNewline)
             for ns in nl {
                 let n = Int(ns) ?? 0
@@ -896,7 +951,6 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     @IBAction func openDataFile(_ sender: Any) {
         // Always . . . a 'clean' start
         initValues()
-        
         let loadFile = NSOpenPanel()
         loadFile.message = "Load a configuration and a retreived data set file"
         let lfc = loadFile.runModal()
@@ -910,58 +964,72 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     func loadData(url filename: URL) {
         // Open File dialog view for 'load'
         // If filename then load
-        // Parse JSON or XML
+        // Parse JSON
         // Set view with new configuration data
         // Set TextView with new data set incl. '!$ ' part. This will start the showDataPlot() function
-                
-        // Try the load...
         do {
-                //  loadData: NSString
+            //  loadData: NSString
             let loadFile = try NSString(contentsOfFile: filename.relativePath, encoding: String.Encoding.utf8.rawValue)
-            let initJSON = String(loadFile)
-            
+            var datasetJSON = String(loadFile)
+            // Strip all unnecessary spaces and new line characters     // just working a fraction faster...
+            datasetJSON = String(datasetJSON.trimmingCharacters(in: .whitespacesAndNewlines))
             // Get JSON data like: the function will always return a string?
             // let ci = getJSON(title: "channelsIndex", json: initJSON)
             // ---> "3"
-            // update the "number of channels"
-            //
-            // let samples = getJSON(title: "s101", json: initJSON)
-            // ---> "563,562,562,563,562,562,563,562"
-            // Add these to the terminal view and after all are added start the plot
-            
-            let json_chix = getJSONInt(title: json_channels, json: initJSON)
-            let json_osix = getJSONInt(title: json_oversmpl, json: initJSON)
-            let json_ivix = getJSONInt(title: json_interval, json: initJSON)
-            let json_spix = getJSONInt(title: json_samples,  json: initJSON)
-            let json_plix = getJSONInt(title: json_plotStIx, json: initJSON)
-
+            let json_chix = getJSONInt(title: json_channels, json: datasetJSON)
+            let json_osix = getJSONInt(title: json_oversmpl, json: datasetJSON)
+            let json_ivix = getJSONInt(title: json_interval, json: datasetJSON)
+            let json_spix = getJSONInt(title: json_samples,  json: datasetJSON)
+            let json_plix = getJSONInt(title: json_plotStIx, json: datasetJSON)
+            // Update view
             if json_chix >= 0   { numberOfChannels.title          = String(json_chix+1) }
             if json_osix >= 0   { degreeOfOversampling.title      = String(json_osix)   }
             if json_ivix >= 0   { intervalTime.stringValue        = String(json_ivix)   }
             if json_spix >= 0   { numberOfSamples.stringValue     = String(json_spix)   }
             if json_plix >= 0   { plotStyle.title                 = String(availablePlotStyles[json_plix])  }
-            
+            // 'parse' then JSON data set direct to -> receivedDataTextView.textStorage
             if json_spix >= 0 {
                 cleanTextView()
                 receivedDataTextView.textStorage?.mutableString.append("\(json_spix) samples\n")
-                for s in 1...json_spix {
-                    var hs = "s" + String(s)
-                    let json_samples = getJSONIntList(title: hs, json: initJSON)
-                    hs = ""
-                    let c = json_samples.endIndex
-                    if c > 1 {
-                        for cc in 0...c-2 {
-                            hs += "\(json_samples[cc]),"
-                        }
+                // First get all "s###" data from the json file
+                // This can be a set of 16384 (or even more) Ints.
+                var cc: Int     = 0         // "s"-counter
+                var scs: String = ""        // "s"-counter string
+                var hs: String  = ""
+                var workList    = true
+                var hc: Int     = 0
+                repeat {
+                    cc += 1                         // prepare 'search' string like `"s1":`
+                    scs = String("\"s\(cc)\":")
+                    let sIndex = datasetJSON.range(of: scs)
+                    if (sIndex != nil) {
+                        // Found s#
+                        // Now get list of numbers between characters "[" and "]"
+                        datasetJSON = String(datasetJSON[(sIndex?.upperBound...)!])     // very slow without this line of code...
+                        let bodsIndex = datasetJSON.range(of: "[")
+                        let eodsIndex = datasetJSON.range(of: "]")
+                        hs = String(datasetJSON[(bodsIndex?.upperBound)!..<(eodsIndex?.lowerBound)!])
+                        // Now only take decimal digits and the "," characters
+                        let hhs = hs
+                        hs = ""
+                        for c in hhs { if ((c >= "0" && c <= "9") || (c == ",")) { hs += String(c) }}
+                        // Strip ',' if it's the last character
+                        if (hs.last == ",") { hs = String(hs.dropLast()) }
+                        // Append data set line to 'receivedDataTextView'
+                        receivedDataTextView.textStorage?.mutableString.append("\(hs)\n")
+                        // Check if all samples are read already.
+                        hc += 1
+                        if hc == json_spix { workList = false }
+                    } else
+                    {
+                        workList = false    // Stop further 'parsing' of data
                     }
-                    if c > 0 { hs += "\(json_samples[c-1])\n" }
-                    receivedDataTextView.textStorage?.mutableString.append(hs)
-                }
-                receivedDataTextView.textStorage?.mutableString.append("\n!$\n")
-                receivedDataTextView.scrollToEndOfDocument(self)
-                receivedDataTextView.needsDisplay = true
+                } while workList
+                
             }
-        
+            receivedDataTextView.textStorage?.mutableString.append("\n!$\n")    // End of dataset character - start the plotting
+            receivedDataTextView.scrollToEndOfDocument(self)
+            receivedDataTextView.needsDisplay = true
             showDataPlot()
         }   catch
             {
@@ -982,20 +1050,16 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     
     func currentStateAndDataSetToJSON() -> String {
         var rsJSON: String = ""
-        
-        // Current date and time
-        // get the current date and time
+        // Current date and time    // get the current date and time
         let dateNOW = Date()
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy/MM/dd HH:mm"
         let sDateNow = formatter.string(from: dateNOW)
-                
         let ht4     = "    "            // Tabs as spaces...
         let ht8     = ht4 + ht4
         let ht12    = ht4 + ht8
         let ht16    = ht4 + ht12
         let ht20    = ht4 + ht16
-
         // The four Object titles
         let openJSON    =  "{\n"
         let mainJSON    =  ht4 + "\"TeensyLogger-Controller-JSON\": {\n"
@@ -1004,18 +1068,15 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         let dataJSON    =  ht8 + "\"TeensyLogger-Controller-sample-values\": {\n"
         let subclJSON   =  "},\n"
         let closeJSON   =  "}\n"
-
         let verlJSON    =  ht12 + "\"name\": \"TeensyLogger-Controller setup file\",\n" +
                            ht12 + "\"version\": \"" + appVersion! + "\",\n" +
                            ht12 + "\"data date\": \"" + sDateNow + "\"\n" + ht8 + subclJSON
-        
         let chJSON = ht12 + "\"" + json_channels + "\": " + String(numberOfChannels.indexOfSelectedItem) + ",\n"
         let osJSON = ht12 + "\"" + json_oversmpl + "\": " + String(degreeOfOversampling.indexOfSelectedItem) + ",\n"
         let ivJSON = ht12 + "\"" + json_interval + "\": " + intervalTime.stringValue + ",\n"
         let spJSON = ht12 + "\"" + json_samples  + "\": " + numberOfSamples.stringValue + ",\n"
         let psJSON = ht12 + "\"" + json_plotStIx + "\": " + String(plotStyle.indexOfSelectedItem) + "\n"
         let initlJSON = chJSON + osJSON + ivJSON + spJSON + psJSON + ht8 + subclJSON
-        
         var dataSetJSON: String = ""
         let ppr     = plotPoints.endIndex
         let ppc     = plotPoints[0].endIndex
@@ -1034,7 +1095,6 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
             }
             dataSetJSON += "\n"
         }
-            
         rsJSON =    openJSON    +
                     mainJSON    +
                     verJSON     +
@@ -1046,7 +1106,6 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
                     ht8 +   closeJSON   +
                     ht4 +   closeJSON   +
                             closeJSON
-        
         return rsJSON
     }
     
@@ -1057,14 +1116,11 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         // Convert to JSON or XML
         // Open File dialog view for 'save'
         // If filename then save
-
         // get current data set to 'plotPoints' (global array)
         retrieveData()
-
         // Is there data to be stored?
         if plotPoints.endIndex > 1 {
             let dataString = currentStateAndDataSetToJSON()
-
             // Try the save...
             do  {
                     try
@@ -1082,7 +1138,6 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     // Hide the canvas and show the helper info
     @IBAction func helperInfo(_ sender: Any) {
         helpRichTextScroller.isHidden = true    // Can't get the scoller hidden at start of the code. Yet.
-        
         canvas.isHidden             = true
         canvas.needsDisplay         = true
         helpRichText.isHidden       = false
@@ -1091,8 +1146,7 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     }
     
 
-    // Invertion of the previous function
-    // Hide the helper info and show the canvas
+    // Invertion of the previous function   // Hide the helper info and show the canvas
     func showCanvas() {
         helpRichText.isHidden       = true
         helpRichText.needsDisplay   = true
@@ -1103,7 +1157,7 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     
 
     // Graphical works // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
-    
+    //
     // Reading the position on the oscilloscope canvas with a mouse click
     @IBAction func mouseClickOnCanvas(_ sender: Any) {
         let pX      = Int(px)       // CGFloat -> Int
@@ -1113,17 +1167,14 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         let dV1     = Double(V1)
         let rmpx    = mousePositionX - oX + deltaX
         let rmpy    = mousePositionY - oY + deltaY
-        
         // time calculations
         // time based plot is started at division 3 for 20 divisions
         // V1 has the number of pixels per division
         let iTime       = Double(intervalTime.stringValue) ?? 0.0
         let nSamples    = Double(numberOfSamples.stringValue) ?? 0.0
-        let sampleTime  = iTime * nSamples / milli2micro                        // This is the sample time in milliseconds
-
+        let sampleTime  = iTime * nSamples / milli2micro                // This is the sample time in milliseconds
         // Get the plot style
         let hbTime: Bool = plotStyle.indexOfSelectedItem < 2
-
         if rmpx > 0 && rmpx < pX && rmpy > 0 && rmpy < pY {     // 'extra' range check
             if hbTime { // Time scaled plot -> x-axis is time, y-axis is Voltage
                 let xTime = ((Double(rmpx) - 2.0 * dV1) / (Double(pX) - 4.0 * dV1)) * sampleTime
@@ -1149,22 +1200,17 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         let psix        = plotStyle.indexOfSelectedItem
         let pSamples    = plotPoints.endIndex
         var nChannels   = 0
-        
         // ONLY plot if there are at least two (2) points in the plotPoints list
         if pSamples > 1 {
             nChannels = Int(availableChannels[numberOfChannels.indexOfSelectedItem]) ?? 1
-            
             initCanvas()            // Start with a blank canvas before drawing a new plot
             image.lockFocus()
-
             let channels = Array(repeating: NSBezierPath(), count: nChannels)
-
             // Only plot the channels if all plot data is available
             if nChannels <= plotPoints[0].endIndex {
                 if psix < 2 || nChannels < 2 {  // time scaled plot
                     let range   = Float(2*tenVolt*V1)
                     let step    = range / Float(pSamples-1)
-                    
                     for ci in (0...nChannels-1).reversed() {
                     // for ci in 0...nChannels-1 {
                         var xpos = Float(x0 - tenVolt*V1)        // Start position for x (at -10V0)
@@ -1174,11 +1220,9 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
                         } else {
                             ypos *= correctionFactorPlus[ci]
                         }
-
                         channelColours[ci].set()
                         channels[ci].lineWidth = 1
                         channels[ci].move(to: NSPoint( x: Int(xpos), y: y0 + Int(ypos)))
-
                         for s in 1...pSamples-1 {
                             xpos += step
                             ypos = Float(plotPoints[s][ci] - calibrated0V0[ci])
@@ -1192,16 +1236,13 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
                         channels[ci].stroke()
                         channels[ci].removeAllPoints()
                     }
-                        
                 } else {
-                    // (x,y) plot -- There is NO (x,y,z) plot YET . . .
-                    
+                    // (x,y) plot                   -- There is NO (x,y,z) plot YET . . .
                     // Create and draw 1 (x,y) plot  if the number of channels is at least 2 or 3
                     // Create and draw 2 (x,y) plots if the number of channels is at least 4 or 5
                     // Create and draw 3 (x,y) plots if the number of channels is 6 or 7
                     // Create and draw 4 (x,y) plots if the number of channels is 8
                     let nPlots = nChannels / 2
-                    
                     for pcxy in (0...nPlots-1).reversed() {
                         let chx = 2*pcxy
                         let chy = 2*pcxy+1
@@ -1217,11 +1258,9 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
                         } else {
                             ypos *= correctionFactorPlus[chy]
                         }
-                        
                         channelColours[chx].set()
                         channels[chx].lineWidth = 2
                         channels[chx].move(to: NSPoint( x: x0 + Int(xpos), y: y0 + Int(ypos)))
-
                         for s in 1...pSamples-1 {
                             xpos = Float(plotPoints[s][chx] - calibrated0V0[chx])
                             ypos = Float(plotPoints[s][chy] - calibrated0V0[chy])
@@ -1255,12 +1294,10 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         let ppx     = x0 + x * V1
         let ppy     = y0 + y * V1
         let dpxy    = V1 / df
-
         xline.move(to: NSPoint( x: ppx - dpxy, y: ppy))
         xline.line(to: NSPoint( x: ppx + dpxy, y: ppy))
         xline.move(to: NSPoint( x: ppx, y: ppy - dpxy))
         xline.line(to: NSPoint( x: ppx, y: ppy + dpxy))
-        
         return xline
     }
     
@@ -1269,7 +1306,6 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         // Draw the oscilloscope grid
         // plotstyle ~ either time base  or  (x,y)
         // y-axis at          right      or  middle
-    
         // Some initials - sizes, colours
         let hbTime: Bool = plotStyle.indexOfSelectedItem < 2
         image = NSImage(size: canvas_size)
@@ -1282,27 +1318,22 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         rect.fill()
         gridColour.set()
         line.lineWidth  = 1
-
         // The long axis
         line.move(to: NSPoint( x:    0, y: y0))
         line.line(to: NSPoint( x: 2*x0, y: y0))
-
         // Only draw a y-axis at the centre is the plot style is (x,y)-plot
         if !hbTime {
             line.move(to: NSPoint( x: x0, y:    0))
             line.line(to: NSPoint( x: x0, y: 2*y0))
         }
-        
         // A rectangle for marking the -10 Volt ... +10 Volt borders
         line.appendRect(NSRect(x: x0-tenVolt*V1, y: y0-tenVolt*V1, width: 2*tenVolt*V1, height: 2*tenVolt*V1))
-
         // Four 5 Volt markers on cross
         // Four bigger versons - on the (x,y) plot axis
         line.append(drawCross(posx: -fiveVolt, posy:  zeroVolt, divfactor: 3))
         line.append(drawCross(posx:  fiveVolt, posy:  zeroVolt, divfactor: 3))
         line.append(drawCross(posx:  zeroVolt, posy: -fiveVolt, divfactor: 3))
         line.append(drawCross(posx:  zeroVolt, posy:  fiveVolt, divfactor: 3))
-        
         // A grid of smaller 5 Volt markers
         for rpx in -2...2 {
             let px = fiveVolt * rpx
@@ -1311,7 +1342,6 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
                 line.append(drawCross(posx: px, posy: py, divfactor: 4))
             }
         }
-        
         // All 1 Volt line markers
         for pxy in -tenVolt...tenVolt {
             for rpxy in -oneVolt...oneVolt {
@@ -1321,14 +1351,12 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
                 }
             }
         }
-
         // And the rest of all the 1 Volt dot markers
         for x1 in -twelveVolt...twelveVolt {
             for y1 in -twelveVolt...twelveVolt {
                 line.append(drawCross(posx: x1, posy: y1, divfactor: 1+V1/2))
             }
         }
-        
         line.stroke()
         line.removeAllPoints()
         image.unlockFocus()
