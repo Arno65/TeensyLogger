@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="20037" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="21507" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
         <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="20037"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="21507"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -513,8 +513,8 @@ Gw
                         <rect key="frame" x="766" y="391" width="369" height="5"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                     </box>
-                    <popUpButton toolTip="(⌘X) Select a plot style. The average is over sets of ten consecutive points." verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Wfm-qe-LZF">
-                        <rect key="frame" x="991" y="242" width="128" height="25"/>
+                    <popUpButton toolTip="(⌘X) Select a plot style." verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Wfm-qe-LZF">
+                        <rect key="frame" x="973" y="242" width="146" height="25"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <popUpButtonCell key="cell" type="push" title="time" bezelStyle="rounded" alignment="center" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="Sab-Kq-5bz" id="oSV-Lk-prU">
                             <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
@@ -557,7 +557,7 @@ Gw
                             <action selector="stopTL:" target="536" id="WWl-Wx-KHw"/>
                         </connections>
                     </button>
-                    <button toolTip="(⌘.) Continuous stream of data. (No plot yet.)" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Ln9-iV-gST">
+                    <button toolTip="(⌘.) Continuous stream of data. 2 channel (x,y) plot only." verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Ln9-iV-gST">
                         <rect key="frame" x="784" y="403" width="135" height="32"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <buttonCell key="cell" type="push" title="stream mode" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="eay-pu-M57">
@@ -571,18 +571,9 @@ Gw
                         </connections>
                     </button>
                     <textField verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="SYW-yR-oUd">
-                        <rect key="frame" x="785" y="247" width="116" height="17"/>
+                        <rect key="frame" x="785" y="247" width="133" height="17"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="y-axis: 1 V/div." id="ZUL-yK-o0Z">
-                            <font key="font" size="14" name="Iosevka"/>
-                            <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
-                            <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
-                        </textFieldCell>
-                    </textField>
-                    <textField verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="6HS-C1-71g">
-                        <rect key="frame" x="939" y="248" width="40" height="17"/>
-                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="plot" id="KNB-hD-VdA">
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="center" title="y-axis: 1 V/div." id="ZUL-yK-o0Z">
                             <font key="font" size="14" name="Iosevka"/>
                             <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
                             <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
@@ -643,9 +634,9 @@ Gw
                         </textFieldCell>
                     </textField>
                     <textField verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="lKS-US-DGh">
-                        <rect key="frame" x="791" y="368" width="116" height="17"/>
+                        <rect key="frame" x="784" y="368" width="123" height="17"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="sample frequency" id="YA8-qR-eWe">
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="Nyquist frequency" id="YA8-qR-eWe">
                             <font key="font" size="14" name="Iosevka"/>
                             <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
                             <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
@@ -1050,19 +1041,6 @@ Cg
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <imageCell key="cell" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyDown" id="7eF-5V-QOF"/>
                     </imageView>
-                    <button hidden="YES" toolTip="(⌘F) Start the fft calculation, spectrum analysis on the current data set." verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="nvB-dg-WaK">
-                        <rect key="frame" x="987" y="433" width="63" height="32"/>
-                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <buttonCell key="cell" type="push" title="fft" bezelStyle="rounded" alignment="center" enabled="NO" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="d0M-4i-0P1">
-                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
-                            <font key="font" size="12" name="Iosevka"/>
-                            <string key="keyEquivalent">f</string>
-                            <modifierMask key="keyEquivalentModifierMask" command="YES"/>
-                            <connections>
-                                <action selector="workSpectrum:" target="536" id="dI2-Nc-g6O"/>
-                            </connections>
-                        </buttonCell>
-                    </button>
                     <button toolTip="Work `init &amp; start` in a loop." verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="EpU-Qx-pqp">
                         <rect key="frame" x="918" y="441" width="50" height="18"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
@@ -1079,6 +1057,15 @@ Cg
                             <font key="font" size="12" name="Iosevka"/>
                         </buttonCell>
                     </button>
+                    <textField verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="6HS-C1-71g">
+                        <rect key="frame" x="931" y="247" width="33" height="17"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="plot" id="KNB-hD-VdA">
+                            <font key="font" size="14" name="Iosevka"/>
+                            <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
+                            <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                    </textField>
                 </subviews>
             </view>
             <point key="canvasLocation" x="-232.5" y="624"/>
@@ -1091,6 +1078,7 @@ Cg
         <customObject id="420" customClass="NSFontManager"/>
         <customObject id="536" customClass="SerialPortController" customModule="TeensyLogger_Controller" customModuleProvider="target">
             <connections>
+                <outlet property="NyquistFrequency" destination="u8O-YB-iYd" id="7NG-bM-YII"/>
                 <outlet property="baudRateLabel" destination="570" id="mpv-OM-wT5"/>
                 <outlet property="baudRateSelector" destination="546" id="ZCR-wC-RJb"/>
                 <outlet property="canvas" destination="aia-tv-HnU" id="NLP-W6-5CP"/>
@@ -1112,7 +1100,6 @@ Cg
                 <outlet property="openCloseButton" destination="690" id="8IT-RK-mVg"/>
                 <outlet property="plotStyle" destination="Wfm-qe-LZF" id="R7w-OY-gxs"/>
                 <outlet property="receivedDataTextView" destination="SAf-rO-zrs" id="BJD-jb-Saz"/>
-                <outlet property="sampleFrequency" destination="u8O-YB-iYd" id="xK5-kX-QKN"/>
                 <outlet property="sampleTime" destination="H4D-nc-VJx" id="iCm-Ue-Y0G"/>
                 <outlet property="sampleTimeUnit" destination="zMe-LU-1Ti" id="MEq-4C-z53"/>
                 <outlet property="sendButton" destination="579" id="nw4-ZI-N6a"/>

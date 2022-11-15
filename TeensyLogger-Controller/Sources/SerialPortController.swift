@@ -1,7 +1,7 @@
 //
 //  SerialPortController.swift
 //
-// (cl)  Spring, Summer 2022  by Arno Jacobs
+// (cl)  Spring, Summer, Autumn 2022  by Arno Jacobs
 //
 //  version 1.0a    2022-06-09      Stripped the ORSSerialPortSwiftDemo to the minimum
 //                                  You still need to select the serial port manually :-(
@@ -53,51 +53,52 @@
 //  version 1.8l    2022-08-27      Complete redo for JSON 'parser'. The 'formatting' of the data set "S#": [ 1,2,3 ],
 //                                  is less strick now. No need to place every data entry on a seperate line.
 //                                  Minor changes in code.
+//  version 1.9b    2022-10-08      Expand the FFT function to a maximum of two channels
+//                                  Alas, the code is NOT to my liking...
+//                                  Find out how to combine 2D with 1D array's.
+//  version 1.9d    2022-11-12      Further work & attention to FFT and adding zoom options for x(t), (x,y) and FFT
+//                                  Worked the zoomed time and (x,y) plots
+//                                  Still need the FFT plot (incl. zoomed) - try via plot option -> drop down list
+//  version 1.9x    2022-11-14      More work on & attention to FFT
+//                                  Added 4x, 8x, 16x and 32x zoom on frequency (FFT) - starting from 0 Hz. So low end zoom.
+//                                  Working mouse-click-on-plot info for all plot styles.
+//                                  (Now FFT is working fine by me. But is Bernd happy with the end result?)
 //
-//
-//
+
 //  W.T.D.
 //     ~1.      Automatic selection of the correct TeensyLogger port - select one time, use many times.
 //                  Can't do this safely. The USB port has a different name on each different Mac.
-//                  The current Pop Up Button is working good enough.
-//     !2.      Automatic initialisation of the TeensyLogger
-//                  Can work with open & save setup and data options.
-//                  I once thought ~ Will not work. Rethink this requirment.
-//     ~2.II.   JSON formatted save files - open and save are working -- open recent will not do for the time being...
+//                  The current Pop Up Button is working good enough. (Also
+//     ~2.      JSON formatted save files - open and save are working -- open recent will not do for the time being...
 //              (Rewritten on 2022-07-21 -> 'correct' JSON format)
 //              (Rewritten on 2022-08-25 -> faster JSON 'parser' for the dataset (from O(n^2) -> O(n))
 //     ~3.      Simple square shaped plot (X,Y) in the range -10...+10V for both axis.
 //                  0K. Done. For all even number selected inputs.
 //                  So one (x,y)-plot if 2 inputs are selected and four (x,y)-plots if 8 inputs are selected.
-//     ~3.II.   Reshape the scale for timed plot. Move the y-axis to the left.
 //     ~4.      More text info on main window. Like 1 V/div with (x,y)-plot.
-//     !5.      Zoomed view of plot. Example: (x,y) plot in a range [0V..5V], zoom to this range. Or just one quadrant
-//              Will not do that in the near future (but is possible)
-//              Best to use huge data sets for fft-analysis. A zoom option on the time (X) axis is very helpful here.
+//     ~5.      Zoomed view of plot.
+//              The timed plot is zoomed on the time scale.
+//              The (x,y) plot has a 5X zoom on both axis. Standard [-10V...10V], zoomed [-2V...2V]
+//              The FFT has multiple zoom factors on the frequency scale (4X, 8X, 16X and 32X)
 //     ~6.      Hint info with mouse click on oscilloscope view. Click a point on the view and show it's corresponding values.
 //              There is time and Voltage info from a mouse click on the oscilloscope canvas.
 //     .7.      Refactor to clean code - delete all dummy's and unnecessary doubles
 //              The crosses on the plots can be more compact as functions.
-// -->  8.      Spectrum analysis and other mathematical tricks. (Derivative of the line on a point.)
-//              This can be done with other apps. Using the JSON as input for analysis.
-//              FFT first.
+//     ~8.      Spectrum analysis on 1 or 2 channels.
 //     ~9.      The serial I/O code (ORSSerialPort) needs recompilation for release version.
 //              A previous version had de Framework compiled for Intel only.
 //              Now the source code is integrated and the project can be compiled for Intel and Apple M1
-//     ~10.     A functioning HELP window.
+//     ~10.     A functioning HELP window. (Is working but primitive, text on plot screen.)
 //     ~11.     Implement a 'stream mode' on the TeensyLogger. After that add that functionality to this app.
 //              Only done for (x,y)-plot  -  yet -- ONLY for 'long' sample interval. The TeensyLogger and serial IO have speed limits.
-// -->  12.     Export data to *.csv (for spreadsheets) and a formatted version for GnuPlot.
-//              (Like nr.8) This can be done with other apps. Using the JSON as input for conversion.
-//              Create a seperate (command line) tool for converting the JSON to CSV & GNUPlot input. For those who need it.
-//     ~13.     (Endless) loop options for 'arm' and 'arm & start'
+//     ~12.     (Endless) loop options for 'arm' and 'arm & start'
 //              For this option the function serialPort() has some recursive elements - so it's endless until the stack is running out
 //              Maybe all is fine - but I still have to check memory usage and alike...
-// -->  14.     Optional zoom in with (x,y) plot on quadrant - just make a dropdown for [All @ 10 Volt, All @ 5 Volt, Q1, Q2, Q3, Q4]
-// -->  15.     Optional inversion of X-axis and/or Y-axis (to skip the use of inverters on the A.C.)
-// -->  16.     Optional Z-axis, 2D plot with (line/point) intensity for the Z-axis.
-// -->  17.     Optional zoom in with time based plot on time scale - BUT HOW? - as... from -3 Volt ... + 5.5 Volt ???
+//     !13.     Automatic initialisation of the TeensyLogger -- tried it but does not work (yet)
+// -->  14.     Optional Z-axis, 2D plot with (line/point) intensity for the Z-axis.
+//              In plot style options add a (x,y,z)-plot only for the first 3 channels.
 //
+
 /*
         Most of the user I/O options can be accessed by key equivalents (hotkeys.)
  
@@ -108,7 +109,6 @@
          (⌘C)       (dis)connect            (TL)
          (⌘D)       plot (term. data)       (TL)
          (⌘E)       send (manual command)   (TL)
-         (⌘F)       fft spectrum analysis   (TL)
          (⌘G)       oversampling            (init TL)
          (⌘H)       hide app.               (main menu)
          (⌘I)       initialize              (TL)
@@ -123,7 +123,7 @@
          (⌘?)       help                    (main menu)
          (⌘=)       start                   (TL)
          (⌘-)       stop                    (TL)
-         (⌘.)       stream                  (TL)
+         (⌘.)       stream                  (TL)                only for very slow/long time base - I'm not pleased with this part
          (⌘1)       channels                (TL)
 
 */
@@ -157,21 +157,21 @@ let maxChannels = 8
 
 
 class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelegate {
-
-	@objc let serialPortManager = ORSSerialPortManager.shared()         // usbmodem101899901
-	@objc let availableBaudRates = [115200,57600,9600,1200]
+    
+    @objc let serialPortManager = ORSSerialPortManager.shared()         // usbmodem101899901 (in my case...)
+    @objc let availableBaudRates = [115200,57600,9600,1200]
     @objc dynamic var serialPort: ORSSerialPort? {
-		didSet {
-			oldValue?.close()
-			oldValue?.delegate = nil
+        didSet {
+            oldValue?.close()
+            oldValue?.delegate = nil
             serialPort?.delegate = self
             serialPort?.baudRate = 115200
             serialPort?.parity = .none
             serialPort?.numberOfStopBits = 1
-		}
-	}
-	
-	@IBOutlet weak  var openCloseButton:        NSButton!
+        }
+    }
+    
+    @IBOutlet weak  var openCloseButton:        NSButton!
     @IBOutlet weak  var sendTextField:          NSTextField!
     @IBOutlet weak  var sendButton:             NSButton!
     @IBOutlet       var baudRateSelector:       NSPopUpButton!
@@ -189,7 +189,7 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     @IBOutlet weak  var mouseClickSample:       NSTextField!
     @IBOutlet       var helpRichText:           NSTextView!
     @IBOutlet weak  var helpRichTextScroller:   NSScroller!
-    @IBOutlet weak  var sampleFrequency:        NSTextField!
+    @IBOutlet weak  var NyquistFrequency:       NSTextField!
     @IBOutlet weak  var sampleTime:             NSTextField!
     @IBOutlet weak  var sampleTimeUnit:         NSTextField!
     @IBOutlet weak  var divisionTime:           NSTextField!
@@ -234,7 +234,7 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     var needsInit               = true
     let availableChannels       = ["1","2","3","4","5","6","7","8"]
     let availableOversampling   = ["0","1","2","3","4"]
-    let availablePlotStyles     = ["time","time [avg.]","(x,y)","(x,y) [avg.]"]
+    let availablePlotStyles     = ["time","time avg.10","time zoomed","(x,y)","(x,y) avg.10","(x,y) zoomed","FFT","FFT 4x zoomed","FFT 8x zoomed","FFT 16x zoomed","FFT 32x zoomed"]
     let initialOSS              = "3"
     // These are the calibrated values for -10V0, 0V0 and +10V0
     // In my case the eight channels of the TeensyLogger calibrated to the same values
@@ -256,7 +256,7 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     let sLF = "\n"
     /*
      New calibation data - data created with better TL hardware on 2022-06-20:
-
+     
      Analog input port                                A0  A1  A2  A3  A4  A5  A6  A7
      Data from: TL-Avg-2/Avg0V0-run-1.txt           [509,511,511,508,512,512,512,511]
      Data from: TL-Avg-2/Avg0V0-run-2.txt           [511,511,512,509,513,512,512,511]
@@ -272,7 +272,24 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     var streamStart:Bool    = true
     let streamEndString     = "$$ Streaming stopped."
     let streamPath          = NSBezierPath()
-    var fftInputPoints:[Double] = []                // Add points on the locations where the plotPoints are calculated
+    
+    // 'global' var with result of spectrum analysis / FFT calculations
+    // Now going for a maximum of two channels.
+    var nSpectrumChannels:Int   =    1          // Default 1 channel
+    var spectrum1:[Double]      =   []
+    var spectrum2:[Double]      =   []
+    
+    // Some Zoom helpers
+    var zoomFactorTime:Float    = 1.0
+    let fixedXYZoomFactor:Float = 5.0
+    var zoomFactorFFT:Int       = 1
+    var HzDivValue:Double       = 0
+    
+    // 0K. 2D-array is not working here ...
+    // Because it's only two arrays I'll keep it this (very non generic and cleaner) way
+    var fftInputPointsCh1:[Double] = []     // For a max. of two (2) channels
+    var fftInputPointsCh2:[Double] = []     // add points on the locations where the plotPoints are calculated
+    
     let fftSampleLengths:[Int]  = [512,1024,2048,4096,8192,16384]    // Either strip logged set or append with 0V0-values
     let avgSamples = 10     // At this point the average value is taken over ten (10) consecutive data points
     let bgColour    = NSColor(red: 0.0, green: 0.10, blue: 0.05, alpha: 1.0)
@@ -297,9 +314,10 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     var canvas_size = NSMakeSize(0,0)
     var correctionFactorPlus  = Array(repeating: Float(0), count: maxChannels)
     var correctionFactorMinus = Array(repeating: Float(0), count: maxChannels)
-    let milli2micro:Double  = 1e3
-    let unit2micro:Double   = 1e6
-
+    let milli2micro:Double      = 1e3
+    let unit2micro:Double       = 1e6
+    let NyquistFactor:Double    = 0.5
+    
     
     func initValues() {
         // First some graphical 'constants'
@@ -329,7 +347,7 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
             loopRun.state   = NSControl.StateValue.on
             checkLoopArm    = false
             checkLoopRun    = false
-
+            
             needsInit = false
         }
         streamMode = false
@@ -346,7 +364,7 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         showCanvas()
     }
     
-
+    
     func sendCommand (send sendString: String, sleep st: UInt32 = standardSleepTime) {
         if checkSelectedOpen {
             if let sendCMD = sendString.data(using: String.Encoding.utf8) {
@@ -415,12 +433,13 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         checkLoopArm  = false
         checkLoopRun  = false
         streamMode    = false
+        streamStart   = false
         // if !stopLoopOrStream { sendCommand(send: tl_stop) }
         sendCommand(send: tl_stop)
         showCanvas()
     }
     
-
+    
     @IBAction func plotStreamTL(_ sender: Any) {
         showDataPlot()
     }
@@ -430,16 +449,30 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         updateSampleAndDivisionTime()
         sendCommand(send: tl_status)
     }
-
+    
     
     @IBAction func streamModeTL(_ sender: Any) {
-        // Don't forget to initialize and arm the TeensyLogger
-        cleanTextView()
-        initCanvas()
-        streamMode  = true
-        streamStart = true
-        image.lockFocus()
-        sendCommand(send: tl_stream, sleep: 200)
+        if streamMode { stopTL(sender) }                    // toggle mode on stream button - [stop] will also work ;-)
+        else {
+            // Don't forget to initialize and arm the TeensyLogger
+            // Only stream mode for (x,y) plot so 2 channels.
+            // minimum sample interval 10 ms. (or 10000 µs.)
+            let nch     = Int(availableChannels[numberOfChannels.indexOfSelectedItem]) ?? 1
+            let itime   = Int(intervalTime.stringValue) ?? 0
+            cleanTextView()
+            
+            if (nch >= 2 && itime >= 10000) {
+                armTL(sender)
+                initCanvas()
+                streamMode  = true
+                streamStart = true
+                image.lockFocus()
+                sendCommand(send: tl_stream, sleep: 200)
+            } else
+            {
+                receivedDataTextView.textStorage?.mutableString.setString("steam mode NOT 0K.");
+            }
+        }
     }
     
     
@@ -450,14 +483,33 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     }
     
     
+    // This code is not used here and now
+    // Only for 'debug' info - spectrum data set send to the console
+    func spectrumDataToConsole() {
+        // Return array of spectrum if half the length of the TeensyLogger data set -> so 2*k for input samples
+        print ("n; samples; spectrum")
+        // the arrays spectum1 and spectrum2 will have the same length
+        // The fftInputPoints are the input for spectrum2
+        if (nSpectrumChannels>1) {
+            for k in 0 ..< spectrum1.count {
+                print("#\(k); ch1: \(fftInputPointsCh1[2*k]) -> \(spectrum1[k]);     ch2: \(fftInputPointsCh2[2*k]) -> \(spectrum2[k]) ")
+            }
+        } else {
+            for k in 0 ..< spectrum1.count {
+                print("#\(k); ch1: \(fftInputPointsCh1[2*k]) -> \(spectrum1[k]) ")
+            }
+        }
+    }
+    
+    
     func normalize( _ i: Double, _ v0: Double, _ dVP: Double, _ dVM: Double ) -> Double {
         var rv = i - v0
         if rv > 0 { rv /= dVP } else { rv /= dVM }
         return rv
     }
-
     
-    @IBAction func workSpectrum(_ sender: Any) {
+    
+    func workSpectrum() {
         //  1.  Check if there is workable data in NSTextView -> receivedDataTextView
         //          Will work with channel one but need a minimum of 2^n samples, with n >= 10. (So 512,1024,2048,4096,...)
         //  2.  Get timing data - number of samples and time needed for those samples. Need fps. (sample frequency)
@@ -470,61 +522,69 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         // In this case the function will use the first 1024 samples, 250*1024 = 256 ms
         // fps -> samples / time -> 1024 / 256 -> 4000
         // The fps is allready known in 'sample frequency' that can be seen on the main view.
-        //
-        //The data on the NSTextView for this set starts with:
-        // "\n1200 samples\n459\n461\n462\n464\n466\n..."
-        // ending with:
-        // "\n465\n467\n469\n\n!$\n"
-        //
-        // A maximum in this set is ~634 and a minimum ~382.
-        // Normalizing this set:
-        //  The 0V level for channel 1 with this code is 510.
-        //  This is stored in: let calibrated0V0 = [510,511,511,509,512,512,512,511]
-        //      'distance' to top 634 is 124
-        //      'distance' to bottom 382 is 128 -> this is the biggest delta to 0V0 so normalize with factor 1/128
-        //  fft_sample = (recorded_sample - calibrated0V0[0] ) / 128
-        //      This will produces 'normalized' sample values between -1.0 and +1.0.
-        //
-        // As last print all input and output data.
-        // First some checks in 'Numbers/Excel' before plotting on the canvas.
-        // What is the frequency range?
-        // What is the frequency resolution on the output?
-        // What is the energy range?
-        // And such...
+        
+        
         // As all is well the raw logged data is in 'fftInputPoints[]'
         // 1. create a 2^n size list of input samples for the fft function
-        let v0      = Double(calibrated0V0[0])          //   0V0 level for channel 1
-        let v10p    = Double(calibratedPlus10V0[0])     // +10V0 level for channel 1
-        let v10m    = Double(calibratedMinus10V0[0])    // -10V0 level for channel 1
-        let deltaVPlus: Double      = v10p - v0
-        let deltaVMinus: Double     = v0 - v10m
-        let v0a = Array(repeating: v0, count: fftSampleLengths[0]+1)
-        fftInputPoints.append(contentsOf: v0a)
-        let fftc = fftInputPoints.count               // This way the array > 512 in size -- the minimal length
+        //
+        // The (normalized) spectrum data set for a maximum of two channels is stored in 'spectrum1[]' and 'spectrum2[]'
+        //
+        // First check the number of channels.
+        // Either plot one spectrum is only one channels is available
+        //     or plot the first two channels of more than one channels are available
+        nSpectrumChannels = min (2, Int(availableChannels[numberOfChannels.indexOfSelectedItem]) ?? 1)
+        
+        // Want to do this in ONE two dimensional array - but that seems to be a pain in the . . .
+        // Only need two array so that's why
+        //
+        // Some preps.
+        let v0ch1   = Double(calibrated0V0[0])                                  //  0V0 level for channel 1
+        let v0a     = Array(repeating: v0ch1, count: fftSampleLengths[0]+1)     //  append array of '0V0'
+        fftInputPointsCh1.append(contentsOf: v0a)   // Both will have the same length
+        fftInputPointsCh2.append(contentsOf: v0a)
+        
+        let fftc = fftInputPointsCh1.count               // This way the array > 512 in size -- the minimal length
         for fl in fftSampleLengths.reversed() {
             if (fl < fftc) {
-                fftInputPoints = Array(fftInputPoints[0..<fl])
+                fftInputPointsCh1 = Array(fftInputPointsCh1[0..<fl])
+                if (nSpectrumChannels>1) {
+                    fftInputPointsCh2 = Array(fftInputPointsCh2[0..<fl])
+                }
                 break
             }
         }
-        // 2. normalize the dataset +10V0 is +1.0  to  -10V0 is -1.0
-        // So a -4V20 signal will be 'normalized' to -0.420, and  a +5V50 signal to +0.550
-        // The TeensyLogger might be NOT linear so the 'delta' 0V...+10V0 can be different to -10V0...0V0
-        // That's why there is a deltaVPlus  for 'delta' 0V...+10V0
-        //                 and a deltaVMinus for 'delta' -10V0...0V
-        fftInputPoints = fftInputPoints.map { normalize( $0, v0, deltaVPlus, deltaVMinus ) }
-        // 3. Set fps -> 1.0
-        // 4. Work the fft
-        //   The bandwith is fixed in the lib -> add this to the parameters
-        let spectrum = fft.calculate(fftInputPoints, fps: 1.0)
-        // From this point on do the correct plotting of the spectrum . . .
-        //
-        // Return array of spectrum if half the length of the TeensyLogger data set -> so 2*k for input samples
-        print ("n; samples; spectrum")
-        for k in 0 ..< spectrum.count {
-            print("\(k); \(fftInputPoints[2*k]); \(spectrum[k])")
+        
+        // Work the two channels
+        for spc in 0...nSpectrumChannels-1 {
+            let v0      = Double(calibrated0V0[spc])          //   0V0 level for channel 1 or 2
+            let v10p    = Double(calibratedPlus10V0[spc])     // +10V0 level for channel 1 or 2
+            let v10m    = Double(calibratedMinus10V0[spc])    // -10V0 level for channel 1 or 2
+            let deltaVPlus: Double      = v10p - v0
+            let deltaVMinus: Double     = v0 - v10m
+            
+            // 2. normalize the dataset +10V0 is +1.0  to  -10V0 is -1.0
+            // So a -4V20 signal will be 'normalized' to -0.420, and  a +5V50 signal to +0.550
+            // The TeensyLogger might be NOT linear so the 'delta' 0V...+10V0 can be different to -10V0...0V0
+            // That's why there is a deltaVPlus  for 'delta' 0V...+10V0
+            //                 and a deltaVMinus for 'delta' -10V0...0V
+            if (spc == 0) {
+                fftInputPointsCh1 = fftInputPointsCh1.map { normalize( $0, v0, deltaVPlus, deltaVMinus ) }
+                // 3. Set fps -> 1.0    -- This has NO influence on the spectrum output -- I don't understand what is does.
+                // 4. Work the fft
+                spectrum1 = fft.calculate(fftInputPointsCh1, fps: 1.0)
+            } else {
+                fftInputPointsCh2 = fftInputPointsCh2.map { normalize( $0, v0, deltaVPlus, deltaVMinus ) }
+                // . . . and for the second channel
+                spectrum2 = fft.calculate(fftInputPointsCh2, fps: 1.0)
+            }
+            
         }
+        
+        // The spectrum data is ready for plotting
+        // Uncomment next function if spectrum data is needed in the Console output
+        //      spectrumDataToConsole()
     }
+    
     
     
     func updateSampleAndDivisionTime() {
@@ -580,7 +640,7 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
                     hdss = sMicroseconds
                 }
             } else {
-            // microseconds
+                // microseconds
                 st = Float(tus)
                 hsss = sMicroseconds
                 hdss = sMicroseconds
@@ -591,19 +651,21 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
                 }
             }
         }
-        // Calculate sample frequency in Hz.
-        let sf: Double = unit2micro / Double(iIT)
-        if sf >= 10     { sampleFrequency.stringValue = String(format: "%.1f", sf) }
+        
+        // Calculate Nyquist frequency in Hz.
+        let nf: Double = NyquistFactor * unit2micro / Double(iIT)
+        if nf >= 10     { NyquistFrequency.stringValue = String(format: "%.1f", nf) }
         else
-            if sf >= 1  { sampleFrequency.stringValue = String(format: "%.2f", sf) }
-            else        { sampleFrequency.stringValue = String(format: "%.4f", sf) }
+        if nf >= 1  { NyquistFrequency.stringValue = String(format: "%.2f", nf) }
+        else        { NyquistFrequency.stringValue = String(format: "%.4f", nf) }
+        
         sampleTime.stringValue          = String(format: "%.4f", st)
         sampleTimeUnit.stringValue      = hsss
         divisionTime.stringValue        = String(format: "%.4f", dt)
         divisionTimeUnit.stringValue    = hdss
         mouseClickSample.stringValue = "..."
     }
-
+    
     
     @IBAction func changeOversampling(_ sender: Any) {
         updateSampleAndDivisionTime()
@@ -614,7 +676,7 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         updateSampleAndDivisionTime()
     }
     
-
+    
     @IBAction func changeNumberOfSamples(_ sender: Any) {
         updateSampleAndDivisionTime()
     }
@@ -670,33 +732,33 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
                 if (lines[lc] == SASC) {
                     dumpTL()
                 } else
-                    if (lines[lc] == EoDDC) {
-                        showDataPlot()
-                        loopPlotHelper = true
-                    }
+                if (lines[lc] == EoDDC) {
+                    showDataPlot()
+                    loopPlotHelper = true
+                }
             }
         }
         if loopPlotHelper && checkLoopArm { armTL(self) }
         if loopPlotHelper && checkLoopRun { initializeAndStart(self) }
     }
-
     
-	@IBAction func send(_: Any) {
+    
+    @IBAction func send(_: Any) {
         if checkSelectedOpen {
             let sendString = self.sendTextField.stringValue
             if let sendData = sendString.data(using: String.Encoding.utf8) {
                 self.serialPort?.send(sendData)
             }
         }
-	}
-	
+    }
     
-	@IBAction func returnPressedInTextField(_ sender: Any) {
-//		sendButton.performClick(sender)
+    
+    @IBAction func returnPressedInTextField(_ sender: Any) {
+        //		sendButton.performClick(sender)
         send(self)
         mouseClickSample.stringValue = "..."
-	}
-	
+    }
+    
     
     // This is probably the first thing a user will do
     // Start the nessesary software initializations
@@ -706,7 +768,7 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
     
     
     
-	@IBAction func openOrClosePort(_ sender: Any) {
+    @IBAction func openOrClosePort(_ sender: Any) {
         updateSampleAndDivisionTime()
         // Serial IO Error helper
         if openCloseButton.title == sConnect && openCloseButton.isEnabled && !changePort.isEnabled {
@@ -743,67 +805,28 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
             }
         }
     }
-	
     
-	@IBAction func clear(_ sender: Any) {
+    
+    @IBAction func clear(_ sender: Any) {
         cleanTextView()
-	}
-	
-    
-	// MARK: - ORSSerialPortDelegate
-	func serialPortWasOpened(_ serialPort: ORSSerialPort) {
-		openCloseButton.title = sDisconnect
-	}
-	
-    
-	func serialPortWasClosed(_ serialPort: ORSSerialPort) {
-		openCloseButton.title       = sConnect
-        serialPortLabel.isEnabled   = true
-        baudRateLabel.isEnabled     = true
-        changePort.isEnabled        = true
-        changeBaudRate.isEnabled    = true
-	}
-	
-    
-	func serialPortWasRemovedFromSystem(_ serialPort: ORSSerialPort) {
-        self.serialPort             = nil
-		openCloseButton.title       = sConnect
-        openCloseButton.isEnabled   = false
-        checkSelectedOpen           = false
-        changePort.isEnabled        = true
-        changeBaudRate.isEnabled    = true
-        serialPortLabel.isEnabled   = true
-        baudRateLabel.isEnabled     = true
-	}
-	
-    
-	func serialPort(_ serialPort: ORSSerialPort, didEncounterError error: Error) {
-        infoView(title: "Serial port fail!", message: "SerialPort \(serialPort) encountered an error: \(error)")
-        changePort.isEnabled        = true
-        changeBaudRate.isEnabled    = true
-        serialPortLabel.isEnabled   = true
-        baudRateLabel.isEnabled     = true
     }
-
     
-    func matchChannelsWithPlotStyle() {
-        // Match channels with selected plot style
-        let nch  = Int(availableChannels[numberOfChannels.indexOfSelectedItem]) ?? 1
-        var psix = plotStyle.indexOfSelectedItem
-        if (nch%2==1 && psix>=2) { psix -= 2 }
-        if psix >= 2{
-            divisionTime.isHidden       = true
-            divisionTimeUnit.isHidden   = true
-            divisionTimeLabel.isHidden  = true
-            divisionYaxis.stringValue   = "(x,y):  1 V/div."
-        } else
-        {
-            divisionTime.isHidden       = false
-            divisionTimeUnit.isHidden   = false
-            divisionTimeLabel.isHidden  = false
-            divisionYaxis.stringValue   = "y-axis: 1 V/div."
-        }
-        plotStyle.selectItem(at: psix)
+    
+    @IBAction func changePlotStyle(_ sender: Any) {
+        mouseClickSample.stringValue = "..."
+        matchChannelsWithPlotStyle()
+        showDataPlot()
+    }
+    
+    
+    // Hide the canvas and show the helper info
+    @IBAction func helperInfo(_ sender: Any) {
+        helpRichTextScroller.isHidden = true    // Can't get the scoller hidden at start of the code. Yet.
+        canvas.isHidden             = true
+        canvas.needsDisplay         = true
+        helpRichText.isHidden       = false
+        helpRichText.needsDisplay   = true
+        mouseClickSample.stringValue = "..."
     }
     
     
@@ -812,6 +835,110 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         matchChannelsWithPlotStyle()
         updateSampleAndDivisionTime()
         mouseClickSample.stringValue = "..."
+    }
+    
+    
+    // MARK: - ORSSerialPortDelegate
+    func serialPortWasOpened(_ serialPort: ORSSerialPort) {
+        openCloseButton.title = sDisconnect
+    }
+    
+    
+    func serialPortWasClosed(_ serialPort: ORSSerialPort) {
+        openCloseButton.title       = sConnect
+        serialPortLabel.isEnabled   = true
+        baudRateLabel.isEnabled     = true
+        changePort.isEnabled        = true
+        changeBaudRate.isEnabled    = true
+    }
+    
+    
+    func serialPortWasRemovedFromSystem(_ serialPort: ORSSerialPort) {
+        self.serialPort             = nil
+        openCloseButton.title       = sConnect
+        openCloseButton.isEnabled   = false
+        checkSelectedOpen           = false
+        changePort.isEnabled        = true
+        changeBaudRate.isEnabled    = true
+        serialPortLabel.isEnabled   = true
+        baudRateLabel.isEnabled     = true
+    }
+    
+    
+    func serialPort(_ serialPort: ORSSerialPort, didEncounterError error: Error) {
+        infoView(title: "Serial port fail!", message: "SerialPort \(serialPort) encountered an error: \(error)")
+        changePort.isEnabled        = true
+        changeBaudRate.isEnabled    = true
+        serialPortLabel.isEnabled   = true
+        baudRateLabel.isEnabled     = true
+    }
+    
+    
+    func getZoomFactorFFT() {
+        switch plotStyle.indexOfSelectedItem {
+        case  7:    zoomFactorFFT =  4
+        case  8:    zoomFactorFFT =  8
+        case  9:    zoomFactorFFT = 16
+        case 10:    zoomFactorFFT = 32
+        default:    zoomFactorFFT =  1
+        }
+    }
+    
+    
+    // Only call this for 'plotStyle.indexOfSelectedItem == 2' [time zoomed]
+    func getZoomFactorTimePlot(points: Int) {
+        // Zoom in with a factor with minimal 150 plot points
+        var factor:Float = 1
+        if (points >= 300) {
+            factor = 2
+            if points >= 600 {
+                factor = Float(points) / 300
+                if points >= 2400 {
+                    factor = Float(points) / 600
+                }
+            }
+        }
+        zoomFactorTime = factor
+    }
+    
+    
+    func matchChannelsWithPlotStyle() {
+        // Match channels with selected plot style
+        let nch  = Int(availableChannels[numberOfChannels.indexOfSelectedItem]) ?? 1
+        var psix = plotStyle.indexOfSelectedItem
+        if (nch%2 == 1 && (psix >= 3 && psix <= 5)) { psix -= 3 }   // (x,y) plot needs even number of channels.
+        
+        // (x,y) plot settings
+        if (psix >= 3 && psix <= 5) {
+            divisionTime.isHidden       = true
+            divisionTimeUnit.isHidden   = true
+            divisionTimeLabel.isHidden  = true
+            divisionYaxis.stringValue   = "(x,y):  1 V/div."
+            if (psix == 5) {
+                divisionYaxis.stringValue   = "(x,y): 0.2 V/div."
+            }
+        } else
+        // FFT plot settings
+        if (psix >= 6) {
+            // get Nyquist frequency:       nf
+            // get zoom factor FFT:         zoomFactorFFT
+            // the plot has 20 division:    20
+            // So frequency/div is:         Hz/div = nf / (20 * zoomFactorFFT)
+            let nf      = Double(NyquistFrequency.stringValue) ?? 0.0
+            HzDivValue  = nf/Double(20*zoomFactorFFT)
+            
+            divisionTime.isHidden       = false
+            divisionTimeUnit.isHidden   = false
+            divisionTimeLabel.isHidden  = false
+            divisionYaxis.stringValue   = String(format: "%2.3f Hz/div", HzDivValue)
+        } else
+        {
+            divisionTime.isHidden       = false
+            divisionTimeUnit.isHidden   = false
+            divisionTimeLabel.isHidden  = false
+            divisionYaxis.stringValue   = "y-axis: 1 V/div."
+        }
+        plotStyle.selectItem(at: psix)
     }
     
     
@@ -824,8 +951,10 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         let lc = lines.endIndex - 2
         // Make sure the canvas is visible (not hidden) - we want to see the oscilloscope canvas
         showCanvas()
-        plotPoints.removeAll()          // Be sure to start with an empty list
-        fftInputPoints.removeAll()      // idem
+        plotPoints.removeAll()              // Be sure to start with an empty list
+        fftInputPointsCh1.removeAll()       // idem
+        fftInputPointsCh2.removeAll()       // idem
+        
         if lc > 0 { // We need input line . . .
             for c in 1...lc {
                 let channelValues = lines[c].split(whereSeparator: \.isPunctuation)
@@ -835,10 +964,12 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
                 for cc in 0...chc {
                     let hi = Int(channelValues[cc]) ?? 0
                     if (hi>0) {
-                        hl.append(hi)
-                        if (cc==0) {
-                            // ONLY for channel 1
-                            fftInputPoints.append(Double(hi))
+                        hl.append(hi)                               // this is the raw data from the TeensyLogger [0..1023]
+                        if (cc==0) { // Here only for channel 1
+                            fftInputPointsCh1.append(Double(hi))
+                        }
+                        if (cc==1) { // And here only for channel 2
+                            fftInputPointsCh2.append(Double(hi))
                         }
                     }
                 }
@@ -848,8 +979,13 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
             if (plotPoints.endIndex > 2) {
                 numberOfSamples.stringValue = String(plotPoints.endIndex)
             }
+            
+            // Index of selected plot style (helper)
+            // availablePlotStyles  -> ["time","time avg.","time zoomed","(x,y)","(x,y) avg.","(x,y) zoomed","FFT","FFT 4x zoomed",...,"FFT 32x zoomed"]
+            // index                ->    0      1           2             3       4            5              6     7                   10
+            //
             let psix = plotStyle.indexOfSelectedItem
-            if (psix==1 || psix==3) && plotPoints.endIndex >= (2*avgSamples) {
+            if (psix==1 || psix==4) && plotPoints.endIndex >= (2*avgSamples) {
                 // Now calculate the average value per 'avgSamples' plotPoints
                 // A line needs at least 2 points, so 2*'avgSamples' plotPoints for a useful average calculation
                 let chh = plotPoints[0].endIndex
@@ -880,14 +1016,332 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         }
     }
     
-    
-    @IBAction func changePlotStyle(_ sender: Any) {
+
+    // Invertion of the previous function   // Hide the helper info and show the canvas
+    func showCanvas() {
+        helpRichText.isHidden       = true
+        helpRichText.needsDisplay   = true
+        canvas.isHidden             = false
+        canvas.needsDisplay         = true
         mouseClickSample.stringValue = "..."
-        matchChannelsWithPlotStyle()
-        showDataPlot()
     }
     
     
+    // Graphical works // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
+    //
+    // Reading the position on the oscilloscope canvas with a mouse click
+    @IBAction func mouseClickOnCanvas(_ sender: Any) {
+        let pX      = Int(px)       // CGFloat -> Int
+        let pY      = Int(py)       // CGFloat -> Int
+        let deltaX  = 0             // 'visual' delta distance (pixels) of the tip of the mouse pointer to the grid
+        let deltaY  = 2             // There is some extra delta on my ACER 24" compared to the Retina of the MacBook
+        var dV1     = Double(V1)
+        let rmpx    = mousePositionX - oX + deltaX
+        let rmpy    = mousePositionY - oY + deltaY
+        // time calculations
+        // time based plot is started at division 3 for 20 divisions
+        // V1 has the number of pixels per division
+        let iTime       = Double(intervalTime.stringValue) ?? 0.0
+        let nSamples    = Double(numberOfSamples.stringValue) ?? 0.0
+        let sampleTime  = iTime * nSamples / milli2micro                // This is the sample time in milliseconds
+        // Get the plot style
+        // At this point - // This is only working for standard time & (x,y)
+        // Need for fix the zoomed option
+        // Also need to add the FFT option
+        let psix = plotStyle.indexOfSelectedItem
+        if rmpx > 0 && rmpx < pX && rmpy > 0 && rmpy < pY {     // 'extra' range check
+            if (psix <= 2) {                    // Time scaled plot -> x-axis is time, y-axis is Voltage
+                var xTime = ((Double(rmpx) - 2.0 * dV1) / (Double(pX) - 4.0 * dV1)) * sampleTime
+                xTime /= Double(zoomFactorTime)
+                let yVolt = Double(rmpy - y0) / dV1
+                if xTime >= milli2micro {
+                    mouseClickSample.stringValue = String(format: "%3.3f s.; %2.3f V.", (xTime/milli2micro), yVolt)
+                } else {
+                    mouseClickSample.stringValue = String(format: "%3.3f ms.; %2.3f V.", xTime, yVolt)
+                }
+            } else
+            if (psix >= 3 && psix <= 5) {       // (x,y) Voltage scaled plot -> x-axis and  y-axis are in Volts (1 V/div)
+                var zoomFactorXY: Float = 1.0
+                if (psix == 5) { zoomFactorXY = fixedXYZoomFactor }
+                dV1 *= Double(zoomFactorXY)
+                let xVolt = Double(rmpx - x0) / dV1
+                let yVolt = Double(rmpy - y0) / dV1
+                mouseClickSample.stringValue = String(format: "( %2.3f V., %2.3f V. )", xVolt, yVolt)
+            } else {                            // FFT plot -> x-axis for frequency and y-axis (top/bottom quadrants) for relative energy
+                var xFreq   = Double(tenVolt) + Double(rmpx - x0) / dV1
+                xFreq = max( 0.0, xFreq)
+                xFreq = min( xFreq, (Double(2*tenVolt)))
+                xFreq *= HzDivValue
+                
+                var yEnergy = 10.0*Double(rmpy - y0) / dV1
+                if (yEnergy < 0) {              // Correction for the bottom quadrants
+                    yEnergy += 100.0
+                }
+                yEnergy = max( 0.0, yEnergy)
+                yEnergy = min( yEnergy, 100.0)
+                mouseClickSample.stringValue = String(format: "( %2.2f Hz., %2.0f", xFreq, yEnergy ) + "% )"
+            }
+        }
+    }
+    
+    
+    func showDataPlot() {
+        // Retrieve data from dump to terminal
+        retrieveData()                              // Here the serial input data [0..1023] is converted to plot-data
+        // Only time & (x,y) plot styles
+        // Here the fft-data-set is prepared but NOT calculated
+        
+        // Index of selected plot style (helper)
+        // availablePlotStyles  -> ["time","time avg.","time zoomed","(x,y)","(x,y) avg.","(x,y) zoomed","FFT","FFT 4x zoomed",...,"FFT 32x zoomed"]
+        // index                ->    0      1           2             3       4            5              6     7                   10
+        //
+        let psix = plotStyle.indexOfSelectedItem
+        getZoomFactorFFT()
+        
+        // The 'simple' zoom option for zoomed time plot
+        var pSamples = plotPoints.endIndex
+        zoomFactorTime = 1.0
+        if (psix == 2) {
+            getZoomFactorTimePlot(points: pSamples)
+            pSamples = Int( Float(pSamples) / zoomFactorTime)
+        }
+        
+        matchChannelsWithPlotStyle()
+        
+        var nChannels   = 0
+        // ONLY plot if there are at least two (2) points in the plotPoints list
+        if pSamples > 1 {
+            nChannels = Int(availableChannels[numberOfChannels.indexOfSelectedItem]) ?? 1
+            initCanvas()            // Start with a blank canvas before drawing a new plot
+            image.lockFocus()
+            let channels = Array(repeating: NSBezierPath(), count: nChannels)
+            // Only plot the channels if all plot data is available
+            if nChannels <= plotPoints[0].endIndex {
+                if (psix <= 2 || (psix <= 5 && nChannels < 2)) {        // time scaled plot
+                    let range   = Float(2*tenVolt*V1)
+                    let step    = range / Float(pSamples-1)
+                    for ci in (0...nChannels-1).reversed() {            // .reversed() -> plot channel 'n' OVER channel 'n+1'
+                        // So channel 1 is over all other plotted channels.
+                        // for ci in 0...nChannels-1 {
+                        var xpos = Float(x0 - tenVolt*V1)               // Start position for x (at -10V0)
+                        var ypos = Float(plotPoints[0][ci] - calibrated0V0[ci])
+                        if ypos < 0 {
+                            ypos *= correctionFactorMinus[ci]
+                        } else {
+                            ypos *= correctionFactorPlus[ci]
+                        }
+                        channelColours[ci].set()
+                        channels[ci].lineWidth = 1
+                        channels[ci].move(to: NSPoint( x: Int(xpos), y: y0 + Int(ypos)))
+                        for s in 1...pSamples-1 {
+                            xpos += step
+                            ypos = Float(plotPoints[s][ci] - calibrated0V0[ci])
+                            if ypos < 0 {
+                                ypos *= correctionFactorMinus[ci]
+                            } else {
+                                ypos *= correctionFactorPlus[ci]
+                            }
+                            channels[ci].line(to: NSPoint( x: Int(xpos+0.5), y: y0 + Int(ypos)))
+                        }
+                        channels[ci].stroke()
+                        channels[ci].removeAllPoints()
+                    }
+                } else
+                if (psix >= 3 && psix <= 5) {
+                    // (x,y) plot                   -- There is NO (x,y,z) plot YET . . .
+                    // Create and draw 1 (x,y) plot  if the number of channels is at least 2 or 3
+                    // Create and draw 2 (x,y) plots if the number of channels is at least 4 or 5
+                    // Create and draw 3 (x,y) plots if the number of channels is 6 or 7
+                    // Create and draw 4 (x,y) plots if the number of channels is 8
+                    let nPlots = nChannels / 2
+                    var zoomFactorXY:Float = 1.0
+                    if (psix == 5) { zoomFactorXY = fixedXYZoomFactor }
+                    for pcxy in (0...nPlots-1).reversed() {
+                        let chx = 2*pcxy
+                        let chy = 2*pcxy+1
+                        var xpos = Float(plotPoints[0][chx] - calibrated0V0[chx])
+                        var ypos = Float(plotPoints[0][chy] - calibrated0V0[chy])
+                        if xpos < 0 {
+                            xpos *= correctionFactorMinus[chx]
+                        } else {
+                            xpos *= correctionFactorPlus[chx]
+                        }
+                        if ypos < 0 {
+                            ypos *= correctionFactorMinus[chy]
+                        } else {
+                            ypos *= correctionFactorPlus[chy]
+                        }
+                        // Apply selected zoom factor - initial move
+                        xpos *= zoomFactorXY
+                        ypos *= zoomFactorXY
+                        
+                        channelColours[chx].set()
+                        channels[chx].lineWidth = 2
+                        channels[chx].move(to: NSPoint( x: x0 + Int(xpos), y: y0 + Int(ypos)))
+                        for s in 1...pSamples-1 {
+                            xpos = Float(plotPoints[s][chx] - calibrated0V0[chx])
+                            ypos = Float(plotPoints[s][chy] - calibrated0V0[chy])
+                            if xpos < 0 {
+                                xpos *= correctionFactorMinus[chx]
+                            } else {
+                                xpos *= correctionFactorPlus[chx]
+                            }
+                            if ypos < 0 {
+                                ypos *= correctionFactorMinus[chy]
+                            } else {
+                                ypos *= correctionFactorPlus[chy]
+                            }
+                            // Apply selected zoom factor - rest of the lines
+                            xpos *= zoomFactorXY
+                            ypos *= zoomFactorXY
+                            
+                            channels[chx].line(to: NSPoint( x: x0 + Int(xpos), y: y0 + Int(ypos)))
+                        }
+                        channels[chx].stroke()
+                        channels[chx].removeAllPoints()
+                    }
+                } else {                        // FFT plot
+                    // First get FFT data
+                    workSpectrum()
+                    var plotPoints = spectrum1.count - 1    // If both spectrum1 and spectrum2 are calculated they have the same length
+                    
+                    // Zoom factors
+                    if (psix >=  7) { plotPoints /=  zoomFactorFFT }
+                    let dx:Float = Float(2*tenVolt*V1) / Float(plotPoints)
+                    
+                    // retrieve maximum value of the spectrum
+                    var maxFFT_Y: Double = 0.0
+                    for p in 1...plotPoints { // spectrum1.count-1 {
+                        if (maxFFT_Y < spectrum1[p]) { maxFFT_Y = spectrum1[p]}
+                        if (nChannels>1) {
+                            if (maxFFT_Y < spectrum2[p]) { maxFFT_Y = spectrum2[p]}
+                        }
+                    }
+                    let delta10V = tenVolt * V1
+                    let zoomFFT_Y:Double = Double(delta10V) / maxFFT_Y
+                    var xpos = Float(x0 - delta10V)
+                    var ypos = y0
+                    
+                    // Plot channel 1 -- plotted on top quadrants
+                    channelColours[0].set()
+                    channels[0].lineWidth = 1
+                    channels[0].move(to: NSPoint( x: Int(xpos), y: y0 ))
+                    for p in 1...plotPoints {
+                        xpos += dx
+                        ypos = Int(zoomFFT_Y * spectrum1[p])
+                        channels[0].line(to: NSPoint( x: Int(xpos), y: y0 + ypos))
+                    }
+                    channels[0].stroke()
+                    channels[0].removeAllPoints()
+                    // If there is a second channel . . .
+                    // Channel 1 is plotted in the top quadrants
+                    // Channel 2 is plotted in the bottom quadrants
+                    if (nChannels > 1) {
+                        let y0b = y0 - delta10V
+                        xpos = Float(x0 - delta10V)
+                        channelColours[0].set()         // Plot both channels in white
+                        channels[1].lineWidth = 1
+                        channels[1].move(to: NSPoint( x: Int(xpos), y: y0b ))
+                        // restart
+                        for p in 1...plotPoints {
+                            xpos += dx
+                            ypos = Int(zoomFFT_Y * spectrum2[p])
+                            channels[1].line(to: NSPoint( x: Int(xpos), y: y0b + ypos))
+                        }
+                        channels[1].stroke()
+                        channels[1].removeAllPoints()
+                    }
+                }
+            }
+            image.unlockFocus()
+        }
+        plotPoints.removeAll()
+        canvas.needsDisplay = true
+    }
+    
+    
+    // Draw small cross (relative to grid)
+    func drawCross(posx x: Int, posy y: Int, divfactor df: Int ) -> NSBezierPath {
+        let xline   = NSBezierPath()
+        let ppx     = x0 + x * V1
+        let ppy     = y0 + y * V1
+        let dpxy    = V1 / df
+        xline.move(to: NSPoint( x: ppx - dpxy, y: ppy))
+        xline.line(to: NSPoint( x: ppx + dpxy, y: ppy))
+        xline.move(to: NSPoint( x: ppx, y: ppy - dpxy))
+        xline.line(to: NSPoint( x: ppx, y: ppy + dpxy))
+        return xline
+    }
+    
+    
+    func initCanvas() {
+        // Draw the oscilloscope grid
+        // plotstyle ~ either time base  or  (x,y)
+        // y-axis at          right      or  middle
+        // Some initials - sizes, colours
+        
+        // The 'timed" and 'FFT' plot have NO vertical line at the centre
+        // This vertical line is only plotted for (x,Y)-plots
+        let hbXYcross: Bool = plotStyle.indexOfSelectedItem >= 3 && plotStyle.indexOfSelectedItem <= 5
+        
+        image = NSImage(size: canvas_size)
+        image.lockFocus()
+        canvas.image = image
+        let line = NSBezierPath()       // Start with a new path of lines
+        let rect = NSRect( x:0, y:0, width: px, height: py)
+        let colour = bgColour
+        colour.setFill()
+        rect.fill()
+        gridColour.set()
+        line.lineWidth  = 1
+        // The long axis
+        line.move(to: NSPoint( x:    0, y: y0))
+        line.line(to: NSPoint( x: 2*x0, y: y0))
+        // Only draw a y-axis at the centre is the plot style is (x,y)-plot
+        if hbXYcross {
+            line.move(to: NSPoint( x: x0, y:    0))
+            line.line(to: NSPoint( x: x0, y: 2*y0))
+        }
+        // A rectangle for marking the -10 Volt ... +10 Volt borders
+        line.appendRect(NSRect(x: x0-tenVolt*V1, y: y0-tenVolt*V1, width: 2*tenVolt*V1, height: 2*tenVolt*V1))
+        // Four 5 Volt markers on cross
+        // Four bigger versons - on the (x,y) plot axis
+        line.append(drawCross(posx: -fiveVolt, posy:  zeroVolt, divfactor: 3))
+        line.append(drawCross(posx:  fiveVolt, posy:  zeroVolt, divfactor: 3))
+        line.append(drawCross(posx:  zeroVolt, posy: -fiveVolt, divfactor: 3))
+        line.append(drawCross(posx:  zeroVolt, posy:  fiveVolt, divfactor: 3))
+        // A grid of smaller 5 Volt markers
+        for rpx in -2...2 {
+            let px = fiveVolt * rpx
+            for rpy in -2...2 {
+                let py = fiveVolt * rpy
+                line.append(drawCross(posx: px, posy: py, divfactor: 4))
+            }
+        }
+        // All 1 Volt line markers
+        for pxy in -tenVolt...tenVolt {
+            for rpxy in -oneVolt...oneVolt {
+                line.append(drawCross(posx: pxy, posy: tenVolt*rpxy, divfactor: 6))
+                if !(!hbXYcross && rpxy==0) {
+                    line.append(drawCross(posx: tenVolt*rpxy, posy: pxy, divfactor: 6))
+                }
+            }
+        }
+        // And the rest of all the 1 Volt dot markers
+        for x1 in -twelveVolt...twelveVolt {
+            for y1 in -twelveVolt...twelveVolt {
+                line.append(drawCross(posx: x1, posy: y1, divfactor: 1+V1/2))
+            }
+        }
+        line.stroke()
+        line.removeAllPoints()
+        image.unlockFocus()
+        canvas.needsDisplay = true
+    }
+    
+    
+    // --- Code for loading and storing data sets in JSON format ----- --- -- ----- --- -- ----- --- -- ----- --- -- ----- --- --
+
     // Open and load data from disk - or - save data to disk // ----- ----- ----- -----
     func infoView(title ttl: String, message msg: String) {
         let info = NSAlert()
@@ -1070,7 +1524,7 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
         let closeJSON   =  "}\n"
         let verlJSON    =  ht12 + "\"name\": \"TeensyLogger-Controller setup file\",\n" +
                            ht12 + "\"version\": \"" + appVersion! + "\",\n" +
-                           ht12 + "\"data date\": \"" + sDateNow + "\"\n" + ht8 + subclJSON
+                           ht12 + "\"sample date\": \"" + sDateNow + "\"\n" + ht8 + subclJSON
         let chJSON = ht12 + "\"" + json_channels + "\": " + String(numberOfChannels.indexOfSelectedItem) + ",\n"
         let osJSON = ht12 + "\"" + json_oversmpl + "\": " + String(degreeOfOversampling.indexOfSelectedItem) + ",\n"
         let ivJSON = ht12 + "\"" + json_interval + "\": " + intervalTime.stringValue + ",\n"
@@ -1133,235 +1587,7 @@ class SerialPortController: NSObject, NSApplicationDelegate, ORSSerialPortDelega
             infoView(title: "Did not save current state!", message: "There is no acquired data in the current data set.")
         }
     }
-    
-    
-    // Hide the canvas and show the helper info
-    @IBAction func helperInfo(_ sender: Any) {
-        helpRichTextScroller.isHidden = true    // Can't get the scoller hidden at start of the code. Yet.
-        canvas.isHidden             = true
-        canvas.needsDisplay         = true
-        helpRichText.isHidden       = false
-        helpRichText.needsDisplay   = true
-        mouseClickSample.stringValue = "..."
-    }
-    
 
-    // Invertion of the previous function   // Hide the helper info and show the canvas
-    func showCanvas() {
-        helpRichText.isHidden       = true
-        helpRichText.needsDisplay   = true
-        canvas.isHidden             = false
-        canvas.needsDisplay         = true
-        mouseClickSample.stringValue = "..."
-    }
-    
-
-    // Graphical works // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
-    //
-    // Reading the position on the oscilloscope canvas with a mouse click
-    @IBAction func mouseClickOnCanvas(_ sender: Any) {
-        let pX      = Int(px)       // CGFloat -> Int
-        let pY      = Int(py)       // CGFloat -> Int
-        let deltaX  = 0             // 'visual' delta distance (pixels) of the tip of the mouse pointer to the grid
-        let deltaY  = 2             // There is some extra delta on my ACER 24" compared to the Retina of the MacBook
-        let dV1     = Double(V1)
-        let rmpx    = mousePositionX - oX + deltaX
-        let rmpy    = mousePositionY - oY + deltaY
-        // time calculations
-        // time based plot is started at division 3 for 20 divisions
-        // V1 has the number of pixels per division
-        let iTime       = Double(intervalTime.stringValue) ?? 0.0
-        let nSamples    = Double(numberOfSamples.stringValue) ?? 0.0
-        let sampleTime  = iTime * nSamples / milli2micro                // This is the sample time in milliseconds
-        // Get the plot style
-        let hbTime: Bool = plotStyle.indexOfSelectedItem < 2
-        if rmpx > 0 && rmpx < pX && rmpy > 0 && rmpy < pY {     // 'extra' range check
-            if hbTime { // Time scaled plot -> x-axis is time, y-axis is Voltage
-                let xTime = ((Double(rmpx) - 2.0 * dV1) / (Double(pX) - 4.0 * dV1)) * sampleTime
-                let yVolt = Double(rmpy - y0) / dV1
-                if xTime >= milli2micro {
-                    mouseClickSample.stringValue = String(format: "%3.3f s.; %2.3f V.", (xTime/milli2micro), yVolt)
-                } else {
-                    mouseClickSample.stringValue = String(format: "%3.3f ms.; %2.3f V.", xTime, yVolt)
-                }
-            } else { // (x,y) Voltage scaled plot -> x-axis and  y-axis are in Volts (1 V/div)
-                let xVolt = Double(rmpx - x0) / dV1
-                let yVolt = Double(rmpy - y0) / dV1
-                mouseClickSample.stringValue = String(format: "( %2.3f V., %2.3f V. )", xVolt, yVolt)
-            }
-        }
-    }
-    
-    
-    func showDataPlot() {
-        // Retrieve data from dump to terminal
-        retrieveData()
-        matchChannelsWithPlotStyle()
-        let psix        = plotStyle.indexOfSelectedItem
-        let pSamples    = plotPoints.endIndex
-        var nChannels   = 0
-        // ONLY plot if there are at least two (2) points in the plotPoints list
-        if pSamples > 1 {
-            nChannels = Int(availableChannels[numberOfChannels.indexOfSelectedItem]) ?? 1
-            initCanvas()            // Start with a blank canvas before drawing a new plot
-            image.lockFocus()
-            let channels = Array(repeating: NSBezierPath(), count: nChannels)
-            // Only plot the channels if all plot data is available
-            if nChannels <= plotPoints[0].endIndex {
-                if psix < 2 || nChannels < 2 {  // time scaled plot
-                    let range   = Float(2*tenVolt*V1)
-                    let step    = range / Float(pSamples-1)
-                    for ci in (0...nChannels-1).reversed() {
-                    // for ci in 0...nChannels-1 {
-                        var xpos = Float(x0 - tenVolt*V1)        // Start position for x (at -10V0)
-                        var ypos = Float(plotPoints[0][ci] - calibrated0V0[ci])
-                        if ypos < 0 {
-                            ypos *= correctionFactorMinus[ci]
-                        } else {
-                            ypos *= correctionFactorPlus[ci]
-                        }
-                        channelColours[ci].set()
-                        channels[ci].lineWidth = 1
-                        channels[ci].move(to: NSPoint( x: Int(xpos), y: y0 + Int(ypos)))
-                        for s in 1...pSamples-1 {
-                            xpos += step
-                            ypos = Float(plotPoints[s][ci] - calibrated0V0[ci])
-                            if ypos < 0 {
-                                ypos *= correctionFactorMinus[ci]
-                            } else {
-                                ypos *= correctionFactorPlus[ci]
-                            }
-                            channels[ci].line(to: NSPoint( x: Int(xpos+0.5), y: y0 + Int(ypos)))
-                        }
-                        channels[ci].stroke()
-                        channels[ci].removeAllPoints()
-                    }
-                } else {
-                    // (x,y) plot                   -- There is NO (x,y,z) plot YET . . .
-                    // Create and draw 1 (x,y) plot  if the number of channels is at least 2 or 3
-                    // Create and draw 2 (x,y) plots if the number of channels is at least 4 or 5
-                    // Create and draw 3 (x,y) plots if the number of channels is 6 or 7
-                    // Create and draw 4 (x,y) plots if the number of channels is 8
-                    let nPlots = nChannels / 2
-                    for pcxy in (0...nPlots-1).reversed() {
-                        let chx = 2*pcxy
-                        let chy = 2*pcxy+1
-                        var xpos = Float(plotPoints[0][chx] - calibrated0V0[chx])
-                        var ypos = Float(plotPoints[0][chy] - calibrated0V0[chy])
-                        if xpos < 0 {
-                            xpos *= correctionFactorMinus[chx]
-                        } else {
-                            xpos *= correctionFactorPlus[chx]
-                        }
-                        if ypos < 0 {
-                            ypos *= correctionFactorMinus[chy]
-                        } else {
-                            ypos *= correctionFactorPlus[chy]
-                        }
-                        channelColours[chx].set()
-                        channels[chx].lineWidth = 2
-                        channels[chx].move(to: NSPoint( x: x0 + Int(xpos), y: y0 + Int(ypos)))
-                        for s in 1...pSamples-1 {
-                            xpos = Float(plotPoints[s][chx] - calibrated0V0[chx])
-                            ypos = Float(plotPoints[s][chy] - calibrated0V0[chy])
-                            if xpos < 0 {
-                                xpos *= correctionFactorMinus[chx]
-                            } else {
-                                xpos *= correctionFactorPlus[chx]
-                            }
-                            if ypos < 0 {
-                                ypos *= correctionFactorMinus[chy]
-                            } else {
-                                ypos *= correctionFactorPlus[chy]
-                            }
-                            channels[chx].line(to: NSPoint( x: x0 + Int(xpos), y: y0 + Int(ypos)))
-                        }
-                        channels[chx].stroke()
-                        channels[chx].removeAllPoints()
-                    }
-                }
-            }
-            image.unlockFocus()
-        }
-        plotPoints.removeAll()
-        canvas.needsDisplay = true
-    }
-    
-    
-    // Draw small cross (relative to grid)
-    func drawCross(posx x: Int, posy y: Int, divfactor df: Int ) -> NSBezierPath {
-        let xline   = NSBezierPath()
-        let ppx     = x0 + x * V1
-        let ppy     = y0 + y * V1
-        let dpxy    = V1 / df
-        xline.move(to: NSPoint( x: ppx - dpxy, y: ppy))
-        xline.line(to: NSPoint( x: ppx + dpxy, y: ppy))
-        xline.move(to: NSPoint( x: ppx, y: ppy - dpxy))
-        xline.line(to: NSPoint( x: ppx, y: ppy + dpxy))
-        return xline
-    }
-    
-    
-    func initCanvas() {
-        // Draw the oscilloscope grid
-        // plotstyle ~ either time base  or  (x,y)
-        // y-axis at          right      or  middle
-        // Some initials - sizes, colours
-        let hbTime: Bool = plotStyle.indexOfSelectedItem < 2
-        image = NSImage(size: canvas_size)
-        image.lockFocus()
-        canvas.image = image
-        let line = NSBezierPath()       // Start with a new path of lines
-        let rect = NSRect( x:0, y:0, width: px, height: py)
-        let colour = bgColour
-        colour.setFill()
-        rect.fill()
-        gridColour.set()
-        line.lineWidth  = 1
-        // The long axis
-        line.move(to: NSPoint( x:    0, y: y0))
-        line.line(to: NSPoint( x: 2*x0, y: y0))
-        // Only draw a y-axis at the centre is the plot style is (x,y)-plot
-        if !hbTime {
-            line.move(to: NSPoint( x: x0, y:    0))
-            line.line(to: NSPoint( x: x0, y: 2*y0))
-        }
-        // A rectangle for marking the -10 Volt ... +10 Volt borders
-        line.appendRect(NSRect(x: x0-tenVolt*V1, y: y0-tenVolt*V1, width: 2*tenVolt*V1, height: 2*tenVolt*V1))
-        // Four 5 Volt markers on cross
-        // Four bigger versons - on the (x,y) plot axis
-        line.append(drawCross(posx: -fiveVolt, posy:  zeroVolt, divfactor: 3))
-        line.append(drawCross(posx:  fiveVolt, posy:  zeroVolt, divfactor: 3))
-        line.append(drawCross(posx:  zeroVolt, posy: -fiveVolt, divfactor: 3))
-        line.append(drawCross(posx:  zeroVolt, posy:  fiveVolt, divfactor: 3))
-        // A grid of smaller 5 Volt markers
-        for rpx in -2...2 {
-            let px = fiveVolt * rpx
-            for rpy in -2...2 {
-                let py = fiveVolt * rpy
-                line.append(drawCross(posx: px, posy: py, divfactor: 4))
-            }
-        }
-        // All 1 Volt line markers
-        for pxy in -tenVolt...tenVolt {
-            for rpxy in -oneVolt...oneVolt {
-                line.append(drawCross(posx: pxy, posy: tenVolt*rpxy, divfactor: 6))
-                if !(hbTime && rpxy==0) {
-                    line.append(drawCross(posx: tenVolt*rpxy, posy: pxy, divfactor: 6))
-                }
-            }
-        }
-        // And the rest of all the 1 Volt dot markers
-        for x1 in -twelveVolt...twelveVolt {
-            for y1 in -twelveVolt...twelveVolt {
-                line.append(drawCross(posx: x1, posy: y1, divfactor: 1+V1/2))
-            }
-        }
-        line.stroke()
-        line.removeAllPoints()
-        image.unlockFocus()
-        canvas.needsDisplay = true
-    }
 }
 
 // End of code.

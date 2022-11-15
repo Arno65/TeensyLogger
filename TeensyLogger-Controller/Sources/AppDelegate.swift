@@ -32,7 +32,7 @@
 //	TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 //	SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// (cl)  Spring, Summer 2022  by Arno Jacobs
+// (cl)  Spring, Summer, Autumn 2022  by Arno Jacobs
 //
 // See 'SerialPortController.swift' for version information.
 //

@@ -10,7 +10,7 @@
 		32053852286C52F6007508AC /* TeensyLogger.ino in Resources */ = {isa = PBXBuildFile; fileRef = 32053851286C52F6007508AC /* TeensyLogger.ino */; };
 		32307A91286C818600E244D6 /* TLChelp.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 32307A8E286C818600E244D6 /* TLChelp.rtf */; };
 		3250094A2869EDA300D70B45 /* ORSSerial.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3278B6112867D2F200192D14 /* ORSSerial.framework */; };
-		3250094B2869EDA300D70B45 /* ORSSerial.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 3278B6112867D2F200192D14 /* ORSSerial.framework */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		3250094B2869EDA300D70B45 /* ORSSerial.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 3278B6112867D2F200192D14 /* ORSSerial.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		325CED4A288E8BF400411281 /* fft.swift in Sources */ = {isa = PBXBuildFile; fileRef = 325CED49288E8BF400411281 /* fft.swift */; };
 		9D0E21661A0441F500051960 /* SerialPortController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D0E21651A0441F500051960 /* SerialPortController.swift */; };
 		9D0E21681A04460000051960 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 9D0E21671A04460000051960 /* MainMenu.xib */; };
@@ -152,11 +152,12 @@
 			attributes = {
 				LastSwiftMigration = 0700;
 				LastSwiftUpdateCheck = 1340;
-				LastUpgradeCheck = 1340;
+				LastUpgradeCheck = 1410;
 				ORGANIZATIONNAME = "Open Reel Software";
 				TargetAttributes = {
 					9DFD06171A043BA400CE0294 = {
 						CreatedOnToolsVersion = 6.1;
+						DevelopmentTeam = 3PT9T56P92;
 						LastSwiftMigration = 1340;
 					};
 				};
@@ -262,6 +263,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -319,6 +321,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = YES;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -345,15 +348,17 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = 3PT9T56P92;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",
 				);
 				INFOPLIST_FILE = "$(SRCROOT)/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MARKETING_VERSION = 1.8l;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
+				MARKETING_VERSION = 1.9x;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.openreelsoftware.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -372,18 +377,21 @@
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = "";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",
 				);
 				INFOPLIST_FILE = "$(SRCROOT)/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MARKETING_VERSION = 1.8l;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
+				MARKETING_VERSION = 1.9x;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.openreelsoftware.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=macosx*]" = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "";
 				SWIFT_VERSION = 5.0;
 			};
